@@ -61,6 +61,12 @@ const Analyze = () => {
               </Button>
             )}
 
+
+            {analysisError && (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3">
+                <p className="text-xs text-destructive font-medium">{analysisError}</p>
+              </div>
+            )}
             {result && (
               <div className="glass rounded-xl p-4 space-y-3">
                 <div>

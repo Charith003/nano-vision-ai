@@ -8,8 +8,6 @@ import ImageUploader from "@/components/ImageUploader";
 import StatCard from "@/components/StatCard";
 import { runMlMicroscopyAnalysis, type MlAnalysisResult } from "@/lib/mlAnalysis";
 
-const metricClass = "rounded-lg bg-secondary/50 p-3";
-
 const Analyze = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -42,7 +40,7 @@ const Analyze = () => {
               setImagePreview(url);
               setResult(null);
             }} />
-
+            
             {imagePreview && (
               <Button
                 onClick={handleAnalyze}
@@ -68,8 +66,7 @@ const Analyze = () => {
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">ML Model</h3>
                   <p className="text-xs mt-1 text-primary font-medium">{result.modelName}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Confidence: {(result.confidence * 100).toFixed(0)}% (calibrated {(result.confidenceCalibrated * 100).toFixed(0)}%)</p>
-                  <p className="text-xs text-muted-foreground">Reconstruction PSNR: {result.reconstructionQuality} dB</p>
+                  <p className="text-xs text-muted-foreground mt-1">Confidence: {(result.confidence * 100).toFixed(0)}% • Reconstruction PSNR: {result.reconstructionQuality} dB</p>
                 </div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Segmentation Metrics</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -118,6 +115,25 @@ const Analyze = () => {
                 <div className="glass rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Reconstructed Microscopy Image</h3>
                   <img src={result.reconstructedImageUrl} alt="Reconstructed microscopy" className="w-full max-h-[320px] object-contain rounded-lg border border-border/50" />
+                </div>
+
+                {/* Screening badge */}
+                <div className={`glass rounded-xl p-4 flex items-center justify-between ${
+                  result.screeningDecision === "Promising Candidate" ? "box-glow" : ""
+                }`}>
+                  <div>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Screening Decision</span>
+                    <p className={`text-xl font-bold ${
+                      result.screeningDecision === "Promising Candidate" ? "text-accent" :
+                      result.screeningDecision === "Needs Optimization" ? "text-chart-4" : "text-destructive"
+                    }`}>
+                      {result.screeningDecision}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-muted-foreground">Aggregation Score</span>
+                    <p className="text-lg font-mono font-bold">{result.aggregationScore}</p>
+                  </div>
                 </div>
 
                 <Tabs defaultValue="characterization" className="w-full">

@@ -1,76 +1,10 @@
 import type { AnalysisResult } from "@/lib/mockAnalysis";
 
-interface TrendPoint {
-  step: string;
-  value: number;
-}
-
-interface PathwaySignal {
-  pathway: string;
-  activityScore: number;
-}
-
 export interface MlAnalysisResult extends AnalysisResult {
   modelName: string;
   confidence: number;
-  confidenceCalibrated: number;
   reconstructionQuality: number;
   reconstructedImageUrl: string;
-  physicsInformedScore: number;
-  multiScaleStructuralIndex: number;
-  temporalStability: TrendPoint[];
-  surfacePropertyEstimate: {
-    zetaPotentialMv: number;
-    hydrophobicityIndex: number;
-  };
-  shapeIrregularity: {
-    aspectRatioDispersion: number;
-    convexityDefectIndex: number;
-    fractalDimension: number;
-  };
-  drugFormulation: {
-    diffusionCoefficient: number;
-    transportEfficiency: number;
-    releaseKinetics: TrendPoint[];
-    pharmacokineticPrediction: {
-      cmax: number;
-      halfLifeHours: number;
-      auc: number;
-      bioavailability: number;
-    };
-    efficacyPrediction: number;
-  };
-  nanoBioInteraction: {
-    dynamicInteraction: TrendPoint[];
-    membraneInteractionScore: number;
-    cytotoxicityRisk: number;
-    pathwayInference: PathwaySignal[];
-  };
-  screeningModel: {
-    predictiveToxicity: number;
-    outcomePrediction: number;
-    riskScore: number;
-    multiFactorScore: number;
-  };
-  advancedModeling: {
-    synthesisSimulationYield: number;
-    molecularInteractionScore: number;
-    pharmacodynamicsIndex: number;
-    dockingAffinityKcal: number;
-    quantumStabilityIndex: number;
-  };
-  clinicalEvaluation: {
-    patientOutcomePrediction: number;
-    clinicalTrialReadiness: number;
-    regulatoryValidationIndex: number;
-    realTimeDeploymentScore: number;
-  };
-  multimodalFusion: {
-    spectroscopyAlignment: number;
-    genomicsAlignment: number;
-    proteomicsAlignment: number;
-    fusionLearningScore: number;
-  };
 }
 
 interface PixelFeatures {
@@ -159,13 +93,6 @@ function reconstructImage(data: ImageData): ImageData {
   return new ImageData(out, width, height);
 }
 
-function buildTrend(prefix: string, baseline: number, gain: number): TrendPoint[] {
-  return Array.from({ length: 5 }).map((_, i) => ({
-    step: `${prefix}${i + 1}`,
-    value: parseFloat(clamp(baseline + gain * i, 0, 100).toFixed(1)),
-  }));
-}
-
 function scoreSample(features: PixelFeatures): Omit<MlAnalysisResult, "reconstructedImageUrl"> {
   const nucleiCount = Math.round(clamp(25 + features.edgeDensity * 280 + features.brightPixelRatio * 140, 20, 220));
   const meanArea = parseFloat((180 + features.contrast * 720).toFixed(1));
@@ -184,31 +111,9 @@ function scoreSample(features: PixelFeatures): Omit<MlAnalysisResult, "reconstru
   const screeningDecision: AnalysisResult["screeningDecision"] =
     weighted > 75 ? "Promising Candidate" : weighted > 62 ? "Needs Optimization" : "Low Performance";
 
-  const confidence = parseFloat(clamp(0.7 + features.contrast * 0.25 + features.edgeDensity * 0.2, 0.72, 0.98).toFixed(2));
-  const confidenceCalibrated = parseFloat(clamp(confidence * 0.92 + 0.04, 0.7, 0.97).toFixed(2));
-
-  const predictiveToxicity = parseFloat(clamp(0.15 + aggregationScore * 0.55 - features.contrast * 0.2, 0.04, 0.89).toFixed(2));
-  const outcomePrediction = parseFloat(clamp(0.78 - predictiveToxicity * 0.5 + interactionStrength / 220, 0.15, 0.96).toFixed(2));
-  const riskScore = parseFloat(clamp((predictiveToxicity * 100 + aggregationScore * 30) / 1.3, 8, 92).toFixed(1));
-
-  const physicsInformedScore = parseFloat(clamp(52 + (1 - aggregationScore) * 34 + features.edgeDensity * 24, 40, 97).toFixed(1));
-  const multiScaleStructuralIndex = parseFloat(clamp(48 + features.contrast * 80 + (1 - features.edgeDensity) * 22, 35, 99).toFixed(1));
-
-  const synthesisSimulationYield = parseFloat(clamp(35 + stabilityScore * 0.6 - predictiveToxicity * 20, 15, 93).toFixed(1));
-  const molecularInteractionScore = parseFloat(clamp(40 + interactionStrength * 0.55 + features.contrast * 25, 22, 98).toFixed(1));
-  const pharmacodynamicsIndex = parseFloat(clamp(30 + outcomePrediction * 60 + (1 - aggregationScore) * 12, 20, 96).toFixed(1));
-  const dockingAffinityKcal = parseFloat((-5.5 - (molecularInteractionScore / 100) * 6.5).toFixed(2));
-  const quantumStabilityIndex = parseFloat(clamp(42 + circularity * 38 + (1 - predictiveToxicity) * 18, 20, 98).toFixed(1));
-
-  const spectroscopyAlignment = parseFloat(clamp(50 + features.contrast * 42, 25, 96).toFixed(1));
-  const genomicsAlignment = parseFloat(clamp(44 + outcomePrediction * 35, 22, 95).toFixed(1));
-  const proteomicsAlignment = parseFloat(clamp(46 + (1 - predictiveToxicity) * 35, 24, 95).toFixed(1));
-  const fusionLearningScore = parseFloat(((spectroscopyAlignment + genomicsAlignment + proteomicsAlignment) / 3).toFixed(1));
-
   return {
-    modelName: "NanoVisionNet-X (Autoencoder + Morphology + Multimodal Heads)",
-    confidence,
-    confidenceCalibrated,
+    modelName: "NanoVisionNet-Lite (Denoising Autoencoder + Morphology Head)",
+    confidence: parseFloat(clamp(0.7 + features.contrast * 0.25 + features.edgeDensity * 0.2, 0.72, 0.98).toFixed(2)),
     reconstructionQuality: parseFloat(clamp(24 + features.contrast * 18 + (1 - aggregationScore) * 8, 22, 45).toFixed(1)),
     nucleiCount,
     meanArea,
@@ -235,108 +140,11 @@ function scoreSample(features: PixelFeatures): Omit<MlAnalysisResult, "reconstru
       { metric: "Circularity", value: circularity * 100, fullMark: 100 },
       { metric: "Density", value: Math.min(densityPerUnit * 5, 100), fullMark: 100 },
     ],
-    physicsInformedScore,
-    multiScaleStructuralIndex,
-    temporalStability: buildTrend("T", stabilityScore - 15, 3.6),
-    surfacePropertyEstimate: {
-      zetaPotentialMv: parseFloat((-12 - aggregationScore * 25).toFixed(1)),
-      hydrophobicityIndex: parseFloat(clamp(0.35 + features.brightPixelRatio * 0.9, 0.1, 0.95).toFixed(2)),
-    },
-    shapeIrregularity: {
-      aspectRatioDispersion: parseFloat(clamp(0.1 + features.edgeDensity * 0.8, 0.06, 0.95).toFixed(2)),
-      convexityDefectIndex: parseFloat(clamp(0.12 + (1 - circularity) * 0.9, 0.08, 0.9).toFixed(2)),
-      fractalDimension: parseFloat(clamp(1.1 + features.edgeDensity * 0.9, 1.05, 1.96).toFixed(2)),
-    },
-    drugFormulation: {
-      diffusionCoefficient: parseFloat((4.2e-10 + features.contrast * 3e-10).toExponential(2)),
-      transportEfficiency: parseFloat(clamp(45 + interactionStrength * 0.45, 30, 96).toFixed(1)),
-      releaseKinetics: buildTrend("H", 18 + features.contrast * 25, 13 - aggregationScore * 9),
-      pharmacokineticPrediction: {
-        cmax: parseFloat(clamp(1.1 + outcomePrediction * 2.4, 0.5, 4.5).toFixed(2)),
-        halfLifeHours: parseFloat(clamp(4.5 + stabilityScore / 12, 3, 16).toFixed(1)),
-        auc: parseFloat(clamp(18 + outcomePrediction * 45, 10, 80).toFixed(1)),
-        bioavailability: parseFloat(clamp(35 + outcomePrediction * 50, 20, 95).toFixed(1)),
-      },
-      efficacyPrediction: parseFloat((outcomePrediction * 100).toFixed(1)),
-    },
-    nanoBioInteraction: {
-      dynamicInteraction: buildTrend("F", interactionStrength - 20, 4.1),
-      membraneInteractionScore: parseFloat(clamp(42 + interactionStrength * 0.5, 30, 96).toFixed(1)),
-      cytotoxicityRisk: parseFloat((predictiveToxicity * 100).toFixed(1)),
-      pathwayInference: [
-        { pathway: "Endocytosis", activityScore: parseFloat(clamp(46 + features.edgeDensity * 42, 20, 95).toFixed(1)) },
-        { pathway: "ROS Response", activityScore: parseFloat(clamp(38 + predictiveToxicity * 55, 15, 94).toFixed(1)) },
-        { pathway: "Autophagy", activityScore: parseFloat(clamp(44 + outcomePrediction * 40, 22, 96).toFixed(1)) },
-      ],
-    },
-    screeningModel: {
-      predictiveToxicity: parseFloat((predictiveToxicity * 100).toFixed(1)),
-      outcomePrediction: parseFloat((outcomePrediction * 100).toFixed(1)),
-      riskScore,
-      multiFactorScore: parseFloat(clamp((outcomePrediction * 100 + (100 - riskScore) + confidenceCalibrated * 100) / 3, 10, 98).toFixed(1)),
-    },
-    advancedModeling: {
-      synthesisSimulationYield,
-      molecularInteractionScore,
-      pharmacodynamicsIndex,
-      dockingAffinityKcal,
-      quantumStabilityIndex,
-    },
-    clinicalEvaluation: {
-      patientOutcomePrediction: parseFloat(clamp(outcomePrediction * 100 - predictiveToxicity * 15, 5, 95).toFixed(1)),
-      clinicalTrialReadiness: parseFloat(clamp(35 + fusionLearningScore * 0.48, 15, 92).toFixed(1)),
-      regulatoryValidationIndex: parseFloat(clamp(28 + confidenceCalibrated * 52, 10, 88).toFixed(1)),
-      realTimeDeploymentScore: parseFloat(clamp(40 + reconstructionQualityEstimate(features) * 1.4, 20, 96).toFixed(1)),
-    },
-    multimodalFusion: {
-      spectroscopyAlignment,
-      genomicsAlignment,
-      proteomicsAlignment,
-      fusionLearningScore,
-    },
   };
 }
 
-
-async function loadBitmap(file: File): Promise<ImageBitmap> {
-  if (typeof createImageBitmap === "function") {
-    try {
-      return await createImageBitmap(file);
-    } catch {
-      // fallback to HTML image decode path below
-    }
-  }
-
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const element = new Image();
-      element.onload = () => resolve(element);
-      element.onerror = () => reject(new Error("Unable to decode uploaded image."));
-      element.src = url;
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, img.naturalWidth);
-    canvas.height = Math.max(1, img.naturalHeight);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("Canvas context unavailable while decoding image.");
-    }
-
-    ctx.drawImage(img, 0, 0);
-    return await createImageBitmap(canvas);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-function reconstructionQualityEstimate(features: PixelFeatures): number {
-  return clamp(24 + features.contrast * 18 + (1 - features.edgeDensity) * 8, 20, 45);
-}
-
 export async function runMlMicroscopyAnalysis(file: File): Promise<MlAnalysisResult> {
-  const bitmap = await loadBitmap(file);
+  const bitmap = await createImageBitmap(file);
   const maxSide = 512;
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(64, Math.round(bitmap.width * scale));

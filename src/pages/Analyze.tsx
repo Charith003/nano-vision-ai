@@ -6,23 +6,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid } from "recharts";
 import ImageUploader from "@/components/ImageUploader";
 import StatCard from "@/components/StatCard";
-import { runMlMicroscopyAnalysis, type MlAnalysisResult } from "@/lib/mlAnalysis";
+import { runMockAnalysis, type AnalysisResult } from "@/lib/mockAnalysis";
 
 const Analyze = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<MlAnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  const handleAnalyze = async () => {
-    if (!selectedFile) return;
+  const handleAnalyze = () => {
     setAnalyzing(true);
-    try {
-      const analysis = await runMlMicroscopyAnalysis(selectedFile);
-      setResult(analysis);
-    } finally {
+    setTimeout(() => {
+      setResult(runMockAnalysis());
       setAnalyzing(false);
-    }
+    }, 2000);
   };
 
   return (
@@ -35,11 +31,7 @@ const Analyze = () => {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-4">
-            <ImageUploader onImageSelect={(file, url) => {
-              setSelectedFile(file);
-              setImagePreview(url);
-              setResult(null);
-            }} />
+            <ImageUploader onImageSelect={(_, url) => { setImagePreview(url); setResult(null); }} />
             
             {imagePreview && (
               <Button
@@ -69,11 +61,6 @@ const Analyze = () => {
             )}
             {result && (
               <div className="glass rounded-xl p-4 space-y-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">ML Model</h3>
-                  <p className="text-xs mt-1 text-primary font-medium">{result.modelName}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Confidence: {(result.confidence * 100).toFixed(0)}% • Reconstruction PSNR: {result.reconstructionQuality} dB</p>
-                </div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Segmentation Metrics</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className={metricClass}>
@@ -116,11 +103,6 @@ const Analyze = () => {
                   <StatCard label="Mean Area" value={result.meanArea} icon={Target} unit="px²" />
                   <StatCard label="Circularity" value={result.circularity} icon={Ruler} />
                   <StatCard label="Density" value={result.densityPerUnit} icon={Layers} unit="/unit" />
-                </div>
-
-                <div className="glass rounded-xl p-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Reconstructed Microscopy Image</h3>
-                  <img src={result.reconstructedImageUrl} alt="Reconstructed microscopy" className="w-full max-h-[320px] object-contain rounded-lg border border-border/50" />
                 </div>
 
                 {/* Screening badge */}

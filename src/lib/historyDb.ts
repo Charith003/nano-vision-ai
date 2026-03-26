@@ -6,6 +6,7 @@ export interface AnalysisHistoryEntry {
   imageName: string;
   imageData: string;
   result: AnalysisResult;
+  optimizedResult?: AnalysisResult;
 }
 
 const STORAGE_KEY = "nano-vision-history-v1";
@@ -36,6 +37,19 @@ export function addHistoryEntry(entry: Omit<AnalysisHistoryEntry, "id" | "create
   const updated = [next, ...existing].slice(0, 100);
   saveEntries(updated);
   return next;
+}
+
+export function updateHistoryEntry(id: string, updater: (entry: AnalysisHistoryEntry) => AnalysisHistoryEntry): AnalysisHistoryEntry | null {
+  const entries = getHistoryEntries();
+  const idx = entries.findIndex((entry) => entry.id === id);
+  if (idx === -1) return null;
+  entries[idx] = updater(entries[idx]);
+  saveEntries(entries);
+  return entries[idx];
+}
+
+export function getHistoryEntryById(id: string): AnalysisHistoryEntry | null {
+  return getHistoryEntries().find((entry) => entry.id === id) ?? null;
 }
 
 export function clearHistoryEntries() {

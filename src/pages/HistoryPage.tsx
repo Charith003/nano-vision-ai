@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Database, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,9 @@ const HistoryPage = () => {
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {entries.map((entry) => (
               <article key={entry.id} className="glass rounded-xl p-4 space-y-3">
-                <img src={entry.imageData} alt={entry.imageName} className="w-full h-44 rounded-lg object-cover border border-border/40" />
+                <Link to={`/history/${entry.id}`}>
+                  <img src={entry.imageData} alt={entry.imageName} className="w-full h-44 rounded-lg object-cover border border-border/40 hover:border-primary/50 transition-colors" />
+                </Link>
                 <div>
                   <p className="font-medium truncate">{entry.imageName}</p>
                   <p className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</p>
@@ -60,6 +63,11 @@ const HistoryPage = () => {
                     <span className="font-semibold">{entry.result.screeningMetrics.riskScore.toFixed(1)}</span>
                   </div>
                 </div>
+                {entry.optimizedResult && (
+                  <div className="rounded-md bg-primary/10 border border-primary/30 p-2 text-xs">
+                    Optimized risk: <span className="font-semibold">{entry.optimizedResult.screeningMetrics.riskScore.toFixed(1)}</span>
+                  </div>
+                )}
               </article>
             ))}
           </div>

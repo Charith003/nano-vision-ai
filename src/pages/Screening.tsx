@@ -3,20 +3,35 @@ import { motion } from "framer-motion";
 import { FlaskConical } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+
+const sections = [
+  { key: "overview", title: "Screening Module Overview" },
+  { key: "morphology", title: "Morphology-Based Screening" },
+  { key: "reconstruction", title: "Reconstruction Quality Assessment" },
+  { key: "interaction", title: "Nano–Bio Interaction Indicators" },
+  { key: "formulation", title: "Formulation Stability Evaluation" },
+  { key: "aggregation", title: "Aggregation Behavior Analysis" },
+  { key: "risk", title: "Multi-Factor Risk Score Calculation" },
+  { key: "classification", title: "Screening Decision Classification" },
+  { key: "model", title: "Model-Based Screening Head (NanoVisionNet-X)" },
+  { key: "visualization", title: "Screening Output Visualization" },
+] as const;
 
 const Screening = () => {
   const [history, setHistory] = useState<AnalysisHistoryEntry[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [openSection, setOpenSection] = useState<(typeof sections)[number]["key"] | null>(null);
 
   useEffect(() => {
     const entries = getHistoryEntries();
     setHistory(entries);
-    setSelectedIds(entries.slice(0, 3).map((entry) => entry.id));
+    setSelectedIds(entries.map((entry) => entry.id));
   }, []);
 
   const selectedSamples = useMemo(
-    () => history.filter((entry) => selectedIds.includes(entry.id)).slice(0, 3),
+    () => history.filter((entry) => selectedIds.includes(entry.id)),
     [history, selectedIds],
   );
 
@@ -28,29 +43,41 @@ const Screening = () => {
   }));
 
   const toggleSelection = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      if (checked) return [...prev, id].slice(0, 3);
-      return prev.filter((item) => item !== id);
-    });
+    setSelectedIds((prev) => (checked ? [...new Set([...prev, id])] : prev.filter((item) => item !== id)));
   };
 
-  const metricCard = (label: string, getter: (entry: AnalysisHistoryEntry) => string) => (
-    <div className="grid md:grid-cols-3 gap-3 mt-3">
-      {selectedSamples.map((sample) => (
-        <div key={`${sample.id}-${label}`} className="rounded-lg bg-secondary/50 p-3 border border-border/40">
-          <p className="text-[11px] text-muted-foreground truncate">{sample.imageName}</p>
-          <p className="text-lg font-mono font-bold">{getter(sample)}</p>
-        </div>
-      ))}
-    </div>
-  );
+  const sectionRows = (section: string, sample: AnalysisHistoryEntry) => {
+    const s = sample.result;
+    switch (section) {
+      case "overview":
+        return `${s.screeningMetrics.riskScore.toFixed(1)} risk | ${s.screeningDecision}`;
+      case "morphology":
+        return `${s.nucleiCount} particles · ${s.meanArea.toFixed(1)} area · ${s.circularity.toFixed(2)} circ`;
+      case "reconstruction":
+        return `PSNR ${s.screeningMetrics.psnr.toFixed(2)} · SSIM ${s.screeningMetrics.ssim.toFixed(3)} · Conf ${s.screeningMetrics.segmentationConfidence.toFixed(1)}`;
+      case "interaction":
+        return `Mem ${s.screeningMetrics.membraneInteractionScore.toFixed(1)} · Cyto ${s.screeningMetrics.cytotoxicityRisk.toFixed(1)} · Zeta ${s.screeningMetrics.zetaPotentialProxy.toFixed(1)}`;
+      case "formulation":
+        return `Diff ${s.screeningMetrics.diffusionCoefficient.toFixed(3)} · Transport ${s.screeningMetrics.transportEfficiency.toFixed(1)} · Bio ${s.screeningMetrics.bioavailabilityPrediction.toFixed(1)}`;
+      case "aggregation":
+        return `Cluster ${s.screeningMetrics.clusterFormation.toFixed(1)} · Density Δ ${s.screeningMetrics.densityVariation.toFixed(1)} · Overlap ${s.screeningMetrics.particleOverlap.toFixed(1)}`;
+      case "risk":
+        return `Vector ${s.screeningMetrics.featureVectorIntegration.toFixed(1)} · Weighted ${s.screeningMetrics.weightedScore.toFixed(1)} · Gap ${s.screeningMetrics.thresholdGap.toFixed(1)}`;
+      case "classification":
+        return `${s.screeningDecision} · Stability Risk ${s.screeningMetrics.stabilityRisk.toFixed(1)}`;
+      case "model":
+        return `Encoder ${s.screeningMetrics.featureVectorIntegration.toFixed(1)} · Sigmoid risk ${s.screeningMetrics.modelHeadRisk.toFixed(1)}`;
+      default:
+        return `Risk ${s.screeningMetrics.riskScore.toFixed(1)} · Final ${s.screeningMetrics.finalScreeningScore.toFixed(1)} · PSNR ${s.screeningMetrics.psnr.toFixed(2)}`;
+    }
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6 space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold mb-2">Drug Screening Dashboard</h1>
-          <p className="text-muted-foreground">Select history samples and compare model-driven screening features.</p>
+          <p className="text-muted-foreground">Select history samples and open any screening section in one click popup.</p>
         </motion.div>
 
         {history.length === 0 ? (
@@ -63,7 +90,7 @@ const Screening = () => {
         ) : (
           <>
             <div className="glass rounded-xl p-5">
-              <h3 className="font-semibold mb-4">Select up to 3 samples from history</h3>
+              <h3 className="font-semibold mb-4">Select samples from history</h3>
               <div className="grid md:grid-cols-3 gap-3">
                 {history.map((entry) => (
                   <label key={entry.id} className="flex items-start gap-2 rounded-lg border border-border/40 p-3 cursor-pointer bg-secondary/20">
@@ -81,9 +108,9 @@ const Screening = () => {
             </div>
 
             {selectedSamples.length > 0 && (
-              <div className="space-y-5">
+              <>
                 <div className="glass rounded-xl p-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">10) Screening Output Visualization</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Risk / Final / PSNR Comparison</h3>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={comparisonData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 14%)" />
@@ -97,54 +124,39 @@ const Screening = () => {
                   </ResponsiveContainer>
                 </div>
 
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">1️⃣ Screening Module Overview</h3>
-                  {metricCard("overview", (s) => `${s.result.screeningMetrics.riskScore.toFixed(1)} risk | ${s.result.screeningDecision}`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">2️⃣ Morphology-Based Screening</h3>
-                  {metricCard("morphology", (s) => `${s.result.nucleiCount} particles · ${s.result.meanArea.toFixed(1)} area · ${s.result.circularity.toFixed(2)} circ`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">3️⃣ Reconstruction Quality Assessment</h3>
-                  {metricCard("recon", (s) => `PSNR ${s.result.screeningMetrics.psnr.toFixed(2)} · SSIM ${s.result.screeningMetrics.ssim.toFixed(3)} · Conf ${s.result.screeningMetrics.segmentationConfidence.toFixed(1)}`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">4️⃣ Nano–Bio Interaction Indicators</h3>
-                  {metricCard("interaction", (s) => `Mem ${s.result.screeningMetrics.membraneInteractionScore.toFixed(1)} · Cyto ${s.result.screeningMetrics.cytotoxicityRisk.toFixed(1)} · Zeta ${s.result.screeningMetrics.zetaPotentialProxy.toFixed(1)}`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">5️⃣ Formulation Stability Evaluation</h3>
-                  {metricCard("formulation", (s) => `Diff ${s.result.screeningMetrics.diffusionCoefficient.toFixed(3)} · Transport ${s.result.screeningMetrics.transportEfficiency.toFixed(1)} · Bio ${s.result.screeningMetrics.bioavailabilityPrediction.toFixed(1)}`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">6️⃣ Aggregation Behavior Analysis</h3>
-                  {metricCard("aggregation", (s) => `Cluster ${s.result.screeningMetrics.clusterFormation.toFixed(1)} · Density Δ ${s.result.screeningMetrics.densityVariation.toFixed(1)} · Overlap ${s.result.screeningMetrics.particleOverlap.toFixed(1)}`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">7️⃣ Multi-Factor Risk Score Calculation</h3>
-                  {metricCard("risk", (s) => `Vector ${s.result.screeningMetrics.featureVectorIntegration.toFixed(1)} · Weighted ${s.result.screeningMetrics.weightedScore.toFixed(1)} · Gap ${s.result.screeningMetrics.thresholdGap.toFixed(1)}`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">8️⃣ Screening Decision Classification</h3>
-                  {metricCard("decision", (s) => `${s.result.screeningDecision} · Stability Risk ${s.result.screeningMetrics.stabilityRisk.toFixed(1)}`)}
-                </section>
-
-                <section className="glass rounded-xl p-5">
-                  <h3 className="font-semibold">9️⃣ Model-Based Screening Head (NanoVisionNet-X)</h3>
-                  {metricCard("head", (s) => `Encoder proxy ${s.result.screeningMetrics.featureVectorIntegration.toFixed(1)} · Sigmoid risk ${s.result.screeningMetrics.modelHeadRisk.toFixed(1)}`)}
-                </section>
-              </div>
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {sections.map((section) => (
+                    <button
+                      key={section.key}
+                      type="button"
+                      className="glass rounded-xl p-4 text-left hover:box-glow transition-all"
+                      onClick={() => setOpenSection(section.key)}
+                    >
+                      <p className="font-semibold mb-1">{section.title}</p>
+                      <p className="text-xs text-muted-foreground">Open popup details for {selectedSamples.length} selected sample(s).</p>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </>
         )}
+
+        <Dialog open={Boolean(openSection)} onOpenChange={(open) => !open && setOpenSection(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{sections.find((section) => section.key === openSection)?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="grid md:grid-cols-2 gap-3 max-h-[65vh] overflow-auto pr-1">
+              {selectedSamples.map((sample) => (
+                <div key={`${sample.id}-${openSection}`} className="rounded-lg border border-border/40 p-3 bg-secondary/20">
+                  <p className="text-sm font-semibold truncate mb-1">{sample.imageName}</p>
+                  <p className="text-sm text-muted-foreground">{sectionRows(openSection ?? "overview", sample)}</p>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

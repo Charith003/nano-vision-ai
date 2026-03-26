@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Analyze from "./pages/Analyze";
 import Screening from "./pages/Screening";
 import HistoryPage from "./pages/HistoryPage";
+import HistoryDetailPage from "./pages/HistoryDetailPage";
+import OptimizationPage from "./pages/OptimizationPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/analyze" element={<Analyze />} />
           <Route path="/screening" element={<Screening />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/history/:id" element={<HistoryDetailPage />} />
+          <Route path="/optimization" element={<OptimizationPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

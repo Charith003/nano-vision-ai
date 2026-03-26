@@ -1,110 +1,162 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FlaskConical, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
-} from "recharts";
-import { runMockAnalysis, type AnalysisResult } from "@/lib/mockAnalysis";
+import { FlaskConical } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+
+const sections = [
+  { key: "overview", title: "Screening Module Overview" },
+  { key: "morphology", title: "Morphology-Based Screening" },
+  { key: "reconstruction", title: "Reconstruction Quality Assessment" },
+  { key: "interaction", title: "Nano–Bio Interaction Indicators" },
+  { key: "formulation", title: "Formulation Stability Evaluation" },
+  { key: "aggregation", title: "Aggregation Behavior Analysis" },
+  { key: "risk", title: "Multi-Factor Risk Score Calculation" },
+  { key: "classification", title: "Screening Decision Classification" },
+  { key: "model", title: "Model-Based Screening Head (NanoVisionNet-X)" },
+  { key: "visualization", title: "Screening Output Visualization" },
+] as const;
 
 const Screening = () => {
-  const [samples, setSamples] = useState<(AnalysisResult & { id: string })[]>([]);
+  const [history, setHistory] = useState<AnalysisHistoryEntry[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [openSection, setOpenSection] = useState<(typeof sections)[number]["key"] | null>(null);
 
-  const addSample = () => {
-    const result = runMockAnalysis();
-    setSamples((s) => [...s, { ...result, id: `S-${String(s.length + 1).padStart(3, "0")}` }]);
+  useEffect(() => {
+    const entries = getHistoryEntries();
+    setHistory(entries);
+    setSelectedIds(entries.map((entry) => entry.id));
+  }, []);
+
+  const selectedSamples = useMemo(
+    () => history.filter((entry) => selectedIds.includes(entry.id)),
+    [history, selectedIds],
+  );
+
+  const comparisonData = selectedSamples.map((sample) => ({
+    id: sample.imageName.slice(0, 16),
+    risk: sample.result.screeningMetrics.riskScore,
+    final: sample.result.screeningMetrics.finalScreeningScore,
+    psnr: sample.result.screeningMetrics.psnr,
+  }));
+
+  const toggleSelection = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => (checked ? [...new Set([...prev, id])] : prev.filter((item) => item !== id)));
   };
 
-  const decisionColor = (d: string) =>
-    d === "Promising Candidate" ? "text-accent" : d === "Needs Optimization" ? "text-chart-4" : "text-destructive";
-
-  const decisionBg = (d: string) =>
-    d === "Promising Candidate" ? "bg-accent/10 border-accent/30" : d === "Needs Optimization" ? "bg-chart-4/10 border-chart-4/30" : "bg-destructive/10 border-destructive/30";
+  const sectionRows = (section: string, sample: AnalysisHistoryEntry) => {
+    const s = sample.result;
+    switch (section) {
+      case "overview":
+        return `${s.screeningMetrics.riskScore.toFixed(1)} risk | ${s.screeningDecision}`;
+      case "morphology":
+        return `${s.nucleiCount} particles · ${s.meanArea.toFixed(1)} area · ${s.circularity.toFixed(2)} circ`;
+      case "reconstruction":
+        return `PSNR ${s.screeningMetrics.psnr.toFixed(2)} · SSIM ${s.screeningMetrics.ssim.toFixed(3)} · Conf ${s.screeningMetrics.segmentationConfidence.toFixed(1)}`;
+      case "interaction":
+        return `Mem ${s.screeningMetrics.membraneInteractionScore.toFixed(1)} · Cyto ${s.screeningMetrics.cytotoxicityRisk.toFixed(1)} · Zeta ${s.screeningMetrics.zetaPotentialProxy.toFixed(1)}`;
+      case "formulation":
+        return `Diff ${s.screeningMetrics.diffusionCoefficient.toFixed(3)} · Transport ${s.screeningMetrics.transportEfficiency.toFixed(1)} · Bio ${s.screeningMetrics.bioavailabilityPrediction.toFixed(1)}`;
+      case "aggregation":
+        return `Cluster ${s.screeningMetrics.clusterFormation.toFixed(1)} · Density Δ ${s.screeningMetrics.densityVariation.toFixed(1)} · Overlap ${s.screeningMetrics.particleOverlap.toFixed(1)}`;
+      case "risk":
+        return `Vector ${s.screeningMetrics.featureVectorIntegration.toFixed(1)} · Weighted ${s.screeningMetrics.weightedScore.toFixed(1)} · Gap ${s.screeningMetrics.thresholdGap.toFixed(1)}`;
+      case "classification":
+        return `${s.screeningDecision} · Stability Risk ${s.screeningMetrics.stabilityRisk.toFixed(1)}`;
+      case "model":
+        return `Encoder ${s.screeningMetrics.featureVectorIntegration.toFixed(1)} · Sigmoid risk ${s.screeningMetrics.modelHeadRisk.toFixed(1)}`;
+      default:
+        return `Risk ${s.screeningMetrics.riskScore.toFixed(1)} · Final ${s.screeningMetrics.finalScreeningScore.toFixed(1)} · PSNR ${s.screeningMetrics.psnr.toFixed(2)}`;
+    }
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-16">
-      <div className="container mx-auto px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-end justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Drug Screening Dashboard</h1>
-            <p className="text-muted-foreground">Rank and evaluate nanoparticle candidates for drug formulation.</p>
-          </div>
-          <Button onClick={addSample} className="gradient-primary text-primary-foreground gap-2">
-            <RefreshCw className="w-4 h-4" /> Generate Sample
-          </Button>
+      <div className="container mx-auto px-6 space-y-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-3xl font-bold mb-2">Drug Screening Dashboard</h1>
+          <p className="text-muted-foreground">Select history samples and open any screening section in one click popup.</p>
         </motion.div>
 
-        {samples.length === 0 ? (
+        {history.length === 0 ? (
           <div className="glass rounded-xl flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <FlaskConical className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-muted-foreground">Generate nanoparticle samples to start screening</p>
+              <p className="text-muted-foreground">No history found. Analyze images first to enable screening comparison.</p>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Sample cards */}
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {samples.map((s, i) => (
-                <motion.div
-                  key={s.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="glass rounded-xl p-5 hover:box-glow transition-all"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="font-mono font-bold text-lg">{s.id}</span>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${decisionBg(s.screeningDecision)} ${decisionColor(s.screeningDecision)}`}>
-                      {s.screeningDecision}
+          <>
+            <div className="glass rounded-xl p-5">
+              <h3 className="font-semibold mb-4">Select samples from history</h3>
+              <div className="grid md:grid-cols-3 gap-3">
+                {history.map((entry) => (
+                  <label key={entry.id} className="flex items-start gap-2 rounded-lg border border-border/40 p-3 cursor-pointer bg-secondary/20">
+                    <Checkbox
+                      checked={selectedIds.includes(entry.id)}
+                      onCheckedChange={(checked) => toggleSelection(entry.id, Boolean(checked))}
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium block truncate">{entry.imageName}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleDateString()}</span>
                     </span>
-                  </div>
-
-                  <ResponsiveContainer width="100%" height={180}>
-                    <RadarChart data={s.radarData}>
-                      <PolarGrid stroke="hsl(220 15% 14%)" />
-                      <PolarAngleAxis dataKey="metric" tick={{ fill: "hsl(215 15% 50%)", fontSize: 10 }} />
-                      <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
-                      <Radar dataKey="value" stroke="hsl(190 90% 50%)" fill="hsl(190 90% 50%)" fillOpacity={0.15} strokeWidth={2} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    <div className="rounded-md bg-secondary/50 p-2 text-center">
-                      <span className="text-[10px] text-muted-foreground block">Stability</span>
-                      <span className="text-sm font-mono font-bold">{s.stabilityScore}</span>
-                    </div>
-                    <div className="rounded-md bg-secondary/50 p-2 text-center">
-                      <span className="text-[10px] text-muted-foreground block">Uniformity</span>
-                      <span className="text-sm font-mono font-bold">{s.uniformityScore}</span>
-                    </div>
-                    <div className="rounded-md bg-secondary/50 p-2 text-center">
-                      <span className="text-[10px] text-muted-foreground block">Interact.</span>
-                      <span className="text-sm font-mono font-bold">{s.interactionStrength}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </label>
+                ))}
+              </div>
             </div>
 
-            {/* Comparison chart */}
-            {samples.length > 1 && (
-              <div className="glass rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Stability Comparison</h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={samples.map((s) => ({ id: s.id, stability: s.stabilityScore, uniformity: s.uniformityScore }))}>
-                    <XAxis dataKey="id" stroke="hsl(215 15% 50%)" fontSize={11} tickLine={false} />
-                    <YAxis stroke="hsl(215 15% 50%)" fontSize={11} tickLine={false} domain={[0, 100]} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(220 18% 7%)", border: "1px solid hsl(220 15% 14%)", borderRadius: "8px", fontSize: "12px" }} />
-                    <Bar dataKey="stability" fill="hsl(190 90% 50%)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="uniformity" fill="hsl(170 80% 45%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            {selectedSamples.length > 0 && (
+              <>
+                <div className="glass rounded-xl p-5">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Risk / Final / PSNR Comparison</h3>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={comparisonData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 14%)" />
+                      <XAxis dataKey="id" stroke="hsl(215 15% 50%)" />
+                      <YAxis stroke="hsl(215 15% 50%)" />
+                      <Tooltip contentStyle={{ backgroundColor: "hsl(220 18% 7%)", border: "1px solid hsl(220 15% 14%)" }} />
+                      <Bar dataKey="risk" fill="hsl(12 85% 60%)" />
+                      <Bar dataKey="final" fill="hsl(190 90% 50%)" />
+                      <Bar dataKey="psnr" fill="hsl(160 70% 45%)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {sections.map((section) => (
+                    <button
+                      key={section.key}
+                      type="button"
+                      className="glass rounded-xl p-4 text-left hover:box-glow transition-all"
+                      onClick={() => setOpenSection(section.key)}
+                    >
+                      <p className="font-semibold mb-1">{section.title}</p>
+                      <p className="text-xs text-muted-foreground">Open popup details for {selectedSamples.length} selected sample(s).</p>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
-          </div>
+          </>
         )}
+
+        <Dialog open={Boolean(openSection)} onOpenChange={(open) => !open && setOpenSection(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{sections.find((section) => section.key === openSection)?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="grid md:grid-cols-2 gap-3 max-h-[65vh] overflow-auto pr-1">
+              {selectedSamples.map((sample) => (
+                <div key={`${sample.id}-${openSection}`} className="rounded-lg border border-border/40 p-3 bg-secondary/20">
+                  <p className="text-sm font-semibold truncate mb-1">{sample.imageName}</p>
+                  <p className="text-sm text-muted-foreground">{sectionRows(openSection ?? "overview", sample)}</p>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

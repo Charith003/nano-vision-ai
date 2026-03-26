@@ -14,7 +14,36 @@ export interface AnalysisResult {
   particleSizes: { size: string; count: number }[];
   densityData: { region: string; density: number }[];
   radarData: { metric: string; value: number; fullMark: number }[];
+  screeningMetrics: {
+    riskScore: number;
+    multiFactorScore: number;
+    areaComparisonScore: number;
+    aggregationDetectionScore: number;
+    psnr: number;
+    ssim: number;
+    structuralClarity: number;
+    segmentationConfidence: number;
+    membraneInteractionScore: number;
+    cytotoxicityRisk: number;
+    surfaceStability: number;
+    zetaPotentialProxy: number;
+    diffusionCoefficient: number;
+    transportEfficiency: number;
+    bioavailabilityPrediction: number;
+    structuralConsistency: number;
+    clusterFormation: number;
+    densityVariation: number;
+    particleOverlap: number;
+    stabilityRisk: number;
+    featureVectorIntegration: number;
+    weightedScore: number;
+    thresholdGap: number;
+    finalScreeningScore: number;
+    modelHeadRisk: number;
+  };
 }
+
+const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 
 export function runMockAnalysis(): AnalysisResult {
   const nucleiCount = Math.floor(Math.random() * 120) + 30;
@@ -58,9 +87,74 @@ export function runMockAnalysis(): AnalysisResult {
     { metric: "Density", value: Math.min(densityPerUnit * 5, 100), fullMark: 100 },
   ];
 
+  const riskScore = clamp(100 - (stabilityScore * 0.35 + uniformityScore * 0.25 + interactionStrength * 0.2 + (100 - aggregationScore * 100) * 0.2));
+  const multiFactorScore = clamp(stabilityScore * 0.4 + uniformityScore * 0.3 + interactionStrength * 0.3);
+  const areaComparisonScore = clamp(100 - stdArea * 0.7);
+  const aggregationDetectionScore = clamp(aggregationScore * 100);
+  const psnr = parseFloat((22 + Math.random() * 15).toFixed(2));
+  const ssim = parseFloat((0.75 + Math.random() * 0.23).toFixed(3));
+  const structuralClarity = clamp((psnr - 20) * 5);
+  const segmentationConfidence = clamp((diceScore * 100 + iouScore * 100) / 2);
+  const membraneInteractionScore = clamp(interactionStrength);
+  const cytotoxicityRisk = clamp(aggregationScore * 90 + (1 - circularity) * 25);
+  const surfaceStability = clamp(stabilityScore - aggregationScore * 15);
+  const zetaPotentialProxy = parseFloat((-35 + Math.random() * 45).toFixed(1));
+  const diffusionCoefficient = parseFloat((0.15 + Math.random() * 0.9).toFixed(3));
+  const transportEfficiency = clamp(uniformityScore * 0.6 + stabilityScore * 0.4);
+  const bioavailabilityPrediction = clamp(transportEfficiency * 0.65 + interactionStrength * 0.35);
+  const structuralConsistency = clamp(100 - stdArea * 0.5 + circularity * 15);
+  const clusterFormation = clamp(aggregationScore * 100);
+  const densityVariation = clamp(Math.abs(densityData[0].density - densityData[2].density) * 2.1);
+  const particleOverlap = clamp(aggregationScore * 80 + (100 - circularity * 100) * 0.25);
+  const stabilityRisk = clamp((100 - stabilityScore) * 0.6 + clusterFormation * 0.4);
+  const featureVectorIntegration = clamp((segmentationConfidence + membraneInteractionScore + bioavailabilityPrediction) / 3);
+  const weightedScore = clamp(featureVectorIntegration * 0.45 + (100 - riskScore) * 0.55);
+  const thresholdGap = parseFloat((weightedScore - 62).toFixed(2));
+  const finalScreeningScore = clamp(weightedScore - riskScore * 0.2);
+  const modelHeadRisk = clamp(100 / (1 + Math.exp(-(riskScore - 45) / 8)));
+
   return {
-    nucleiCount, meanArea, stdArea, circularity, aggregationScore,
-    diceScore, iouScore, densityPerUnit, stabilityScore, uniformityScore,
-    interactionStrength, screeningDecision, particleSizes, densityData, radarData,
+    nucleiCount,
+    meanArea,
+    stdArea,
+    circularity,
+    aggregationScore,
+    diceScore,
+    iouScore,
+    densityPerUnit,
+    stabilityScore,
+    uniformityScore,
+    interactionStrength,
+    screeningDecision,
+    particleSizes,
+    densityData,
+    radarData,
+    screeningMetrics: {
+      riskScore,
+      multiFactorScore,
+      areaComparisonScore,
+      aggregationDetectionScore,
+      psnr,
+      ssim,
+      structuralClarity,
+      segmentationConfidence,
+      membraneInteractionScore,
+      cytotoxicityRisk,
+      surfaceStability,
+      zetaPotentialProxy,
+      diffusionCoefficient,
+      transportEfficiency,
+      bioavailabilityPrediction,
+      structuralConsistency,
+      clusterFormation,
+      densityVariation,
+      particleOverlap,
+      stabilityRisk,
+      featureVectorIntegration,
+      weightedScore,
+      thresholdGap,
+      finalScreeningScore,
+      modelHeadRisk,
+    },
   };
 }

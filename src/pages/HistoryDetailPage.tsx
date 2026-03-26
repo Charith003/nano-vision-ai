@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Download, LoaderCircle, Save, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,16 @@ const HistoryDetailPage = () => {
   const [draftResult, setDraftResult] = useState<AnalysisResult | null>(null);
   const [draftImage, setDraftImage] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const entry = useMemo(() => (id ? getHistoryEntryById(id) : null), [id, version]);
+
+  useEffect(() => {
+    if (!entry) return;
+    setDraftResult(entry.optimizedResult ?? null);
+    setDraftImage(entry.optimizedImageData ?? null);
+    setDraftName(entry.optimizedName ?? `${entry.imageName.replace(/\.[^/.]+$/, "")}-optimized`);
+  }, [entry]);
 
   if (!entry) {
     return (
@@ -29,37 +37,54 @@ const HistoryDetailPage = () => {
 
   const runOptimize = async () => {
     setOptimizing(true);
+    setSaveMessage(null);
     setProgress(0);
 
     const timer = window.setInterval(() => {
       setProgress((p) => (p >= 92 ? p : p + 8));
     }, 120);
 
-    const optimizedResult = optimizeForLowerRisk(entry.result);
-    const optimizedImageData = await createOptimizedImageData(entry.imageData);
-
-    window.clearInterval(timer);
-    setProgress(100);
-    setDraftResult(optimizedResult);
-    setDraftImage(optimizedImageData);
-    setDraftName(entry.optimizedName || `${entry.imageName.replace(/\.[^/.]+$/, "")}-optimized`);
-    setOptimizing(false);
+    try {
+      const optimizedResult = optimizeForLowerRisk(entry.result);
+      const optimizedImageData = await createOptimizedImageData(entry.imageData).catch(() => entry.imageData);
+      setDraftResult(optimizedResult);
+      setDraftImage(optimizedImageData);
+      setDraftName((prev) => prev || entry.optimizedName || `${entry.imageName.replace(/\.[^/.]+$/, "")}-optimized`);
+    } finally {
+      window.clearInterval(timer);
+      setProgress(100);
+      setOptimizing(false);
+    }
   };
 
   const saveOptimized = () => {
-    if (!draftResult || !draftImage) return;
+    const resultToSave = draftResult ?? entry.optimizedResult;
+    const imageToSave = draftImage ?? entry.optimizedImageData ?? entry.imageData;
+    const nameToSave = draftName || entry.optimizedName || `${entry.imageName.replace(/\.[^/.]+$/, "")}-optimized`;
 
-    updateHistoryEntry(entry.id, (current) => ({
+    if (!resultToSave) {
+      setSaveMessage("Run optimization first before saving.");
+      return;
+    }
+
+    const saved = updateHistoryEntry(entry.id, (current) => ({
       ...current,
-      optimizedResult: draftResult,
-      optimizedImageData: draftImage,
-      optimizedName: draftName || `${current.imageName}-optimized`,
+      optimizedResult: resultToSave,
+      optimizedImageData: imageToSave,
+      optimizedName: nameToSave,
     }));
 
+    if (!saved) {
+      setSaveMessage("Unable to save optimized data.");
+      return;
+    }
+
+    setSaveMessage("Optimized data saved successfully.");
     setVersion((v) => v + 1);
   };
 
-  const savedOptimized = entry.optimizedResult;
+  const shownResult = draftResult ?? entry.optimizedResult;
+  const shownImage = draftImage ?? entry.optimizedImageData;
 
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -101,15 +126,15 @@ const HistoryDetailPage = () => {
               </div>
             </div>
 
-            {(draftResult || savedOptimized) && (
+            {shownResult && (
               <div className="glass rounded-xl p-4 border border-primary/30 space-y-4">
                 <h3 className="font-semibold text-primary">Optimized Results (Reduced Risk)</h3>
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-secondary/40 rounded-lg p-3">Decision: <strong>{(draftResult ?? savedOptimized)?.screeningDecision}</strong></div>
-                  <div className="bg-secondary/40 rounded-lg p-3">Risk Score: <strong>{(draftResult ?? savedOptimized)?.screeningMetrics.riskScore.toFixed(1)}</strong></div>
-                  <div className="bg-secondary/40 rounded-lg p-3">Final Score: <strong>{(draftResult ?? savedOptimized)?.screeningMetrics.finalScreeningScore.toFixed(1)}</strong></div>
-                  <div className="bg-secondary/40 rounded-lg p-3">Stability Risk: <strong>{(draftResult ?? savedOptimized)?.screeningMetrics.stabilityRisk.toFixed(1)}</strong></div>
+                  <div className="bg-secondary/40 rounded-lg p-3">Decision: <strong>{shownResult.screeningDecision}</strong></div>
+                  <div className="bg-secondary/40 rounded-lg p-3">Risk Score: <strong>{shownResult.screeningMetrics.riskScore.toFixed(1)}</strong></div>
+                  <div className="bg-secondary/40 rounded-lg p-3">Final Score: <strong>{shownResult.screeningMetrics.finalScreeningScore.toFixed(1)}</strong></div>
+                  <div className="bg-secondary/40 rounded-lg p-3">Stability Risk: <strong>{shownResult.screeningMetrics.stabilityRisk.toFixed(1)}</strong></div>
                 </div>
 
                 <div className="space-y-2">
@@ -118,21 +143,23 @@ const HistoryDetailPage = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={saveOptimized} className="gap-2" disabled={!draftResult || !draftImage}>
+                  <Button onClick={saveOptimized} className="gap-2" disabled={!shownResult}>
                     <Save className="w-4 h-4" /> Save Optimized Data
                   </Button>
                   <Button
                     variant="outline"
                     className="gap-2"
-                    onClick={() => downloadOptimizedImage(draftImage ?? entry.optimizedImageData ?? entry.imageData, draftName || entry.optimizedName || entry.imageName)}
+                    onClick={() => downloadOptimizedImage(shownImage ?? entry.imageData, draftName || entry.optimizedName || entry.imageName)}
                   >
                     <Download className="w-4 h-4" /> Download Optimized Image
                   </Button>
                 </div>
 
-                {(draftImage || entry.optimizedImageData) && (
+                {saveMessage && <p className="text-xs text-primary">{saveMessage}</p>}
+
+                {shownImage && (
                   <img
-                    src={draftImage ?? entry.optimizedImageData}
+                    src={shownImage}
                     alt="Optimized sample"
                     className="w-full h-48 object-contain rounded-lg border border-border/40 bg-black/20"
                   />

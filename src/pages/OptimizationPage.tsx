@@ -6,8 +6,23 @@ import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 const OptimizationPage = () => {
   const [entries, setEntries] = useState<AnalysisHistoryEntry[]>([]);
 
+  const refresh = () => setEntries(getHistoryEntries());
+
   useEffect(() => {
-    setEntries(getHistoryEntries());
+    refresh();
+
+    const onFocus = () => refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   return (
@@ -28,6 +43,7 @@ const OptimizationPage = () => {
               <div className="bg-secondary/40 rounded-lg p-2">Original risk: <strong>{entry.result.screeningMetrics.riskScore.toFixed(1)}</strong></div>
               <div className="bg-secondary/40 rounded-lg p-2">Optimized risk: <strong>{entry.optimizedResult?.screeningMetrics.riskScore.toFixed(1) ?? "-"}</strong></div>
             </div>
+            <p className="text-xs text-muted-foreground">Saved as: {entry.optimizedName ?? "not saved"}</p>
           </div>
         ))}
       </div>

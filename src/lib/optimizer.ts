@@ -31,3 +31,31 @@ export function optimizeForLowerRisk(result: AnalysisResult): AnalysisResult {
 
   return optimized;
 }
+
+export async function createOptimizedImageData(imageData: string): Promise<string> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = imageData;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) return imageData;
+
+  context.filter = "contrast(1.08) saturate(1.05) brightness(1.02)";
+  context.drawImage(image, 0, 0);
+
+  return canvas.toDataURL("image/png");
+}
+
+export function downloadOptimizedImage(imageData: string, name: string) {
+  const anchor = document.createElement("a");
+  anchor.href = imageData;
+  anchor.download = `${name || "optimized-sample"}.png`;
+  anchor.click();
+}

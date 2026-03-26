@@ -7,6 +7,8 @@ export interface AnalysisHistoryEntry {
   imageData: string;
   result: AnalysisResult;
   optimizedResult?: AnalysisResult;
+  optimizedImageData?: string;
+  optimizedName?: string;
 }
 
 const STORAGE_KEY = "nano-vision-history-v1";

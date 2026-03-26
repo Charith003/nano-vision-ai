@@ -6,18 +6,40 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import ImageUploader from "@/components/ImageUploader";
 import StatCard from "@/components/StatCard";
 import { runMockAnalysis, type AnalysisResult } from "@/lib/mockAnalysis";
+import { addHistoryEntry } from "@/lib/historyDb";
+
+const toBase64 = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
 const Analyze = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   const handleAnalyze = () => {
+    if (!imageFile) return;
+
     setAnalyzing(true);
-    setTimeout(() => {
-      setResult(runMockAnalysis());
+
+    setTimeout(async () => {
+      const nextResult = runMockAnalysis();
+      setResult(nextResult);
+
+      const imageData = await toBase64(imageFile);
+      addHistoryEntry({
+        imageName: imageFile.name,
+        imageData,
+        result: nextResult,
+      });
+
       setAnalyzing(false);
-    }, 2000);
+    }, 1200);
   };
 
   return (
@@ -29,10 +51,15 @@ const Analyze = () => {
         </motion.div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left: Upload */}
           <div className="lg:col-span-1 space-y-4">
-            <ImageUploader onImageSelect={(_, url) => { setImagePreview(url); setResult(null); }} />
-            
+            <ImageUploader
+              onImageSelect={(file, url) => {
+                setImagePreview(url);
+                setImageFile(file);
+                setResult(null);
+              }}
+            />
+
             {imagePreview && (
               <Button
                 onClick={handleAnalyze}
@@ -53,12 +80,6 @@ const Analyze = () => {
               </Button>
             )}
 
-
-            {analysisError && (
-              <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3">
-                <p className="text-xs text-destructive font-medium">{analysisError}</p>
-              </div>
-            )}
             {result && (
               <div className="glass rounded-xl p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Segmentation Metrics</h3>
@@ -76,7 +97,6 @@ const Analyze = () => {
             )}
           </div>
 
-          {/* Right: Results */}
           <div className="lg:col-span-2">
             {!result && !analyzing && (
               <div className="glass rounded-xl h-full flex items-center justify-center min-h-[400px]">
@@ -99,7 +119,6 @@ const Analyze = () => {
 
             {result && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-                {/* Stats grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <StatCard label="Nuclei Count" value={result.nucleiCount} icon={CircleDot} />
                   <StatCard label="Mean Area" value={result.meanArea} icon={Target} unit="px²" />
@@ -107,7 +126,6 @@ const Analyze = () => {
                   <StatCard label="Density" value={result.densityPerUnit} icon={Layers} unit="/unit" />
                 </div>
 
-                {/* Screening badge */}
                 <div className={`glass rounded-xl p-4 flex items-center justify-between ${
                   result.screeningDecision === "Promising Candidate" ? "box-glow" : ""
                 }`}>
@@ -126,7 +144,6 @@ const Analyze = () => {
                   </div>
                 </div>
 
-                {/* Histogram */}
                 <div className="glass rounded-xl p-5">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Particle Size Distribution</h3>
                   <ResponsiveContainer width="100%" height={220}>

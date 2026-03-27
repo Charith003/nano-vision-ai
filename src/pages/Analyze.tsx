@@ -48,17 +48,21 @@ const Analyze = () => {
     setAnalyzing(true);
 
     setTimeout(async () => {
-      const nextResult = runMockAnalysis();
-      setResult(nextResult);
+      try {
+        const nextResult = runMockAnalysis();
+        setResult(nextResult);
+        setAnalyzing(false);
 
-      const imageData = await toBase64(imageFile);
-      addHistoryEntry({
-        imageName: imageFile.name,
-        imageData,
-        result: nextResult,
-      });
-
-      setAnalyzing(false);
+        const imageData = await toBase64(imageFile);
+        addHistoryEntry({
+          imageName: imageFile.name,
+          imageData,
+          result: nextResult,
+        });
+      } catch (error) {
+        console.error("Failed to save analysis history", error);
+        setAnalyzing(false);
+      }
     }, 1200);
   };
 

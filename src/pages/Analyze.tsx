@@ -37,6 +37,12 @@ const Analyze = () => {
     }));
   }, [result]);
 
+  const analysisSmilesDiagramUrl = useMemo(() => {
+    if (!result) return "";
+    const encodedSmiles = encodeURIComponent(result.screeningMetrics.smiles);
+    return `https://cactus.nci.nih.gov/chemical/structure/${encodedSmiles}/image?format=png&resolver=smiles`;
+  }, [result]);
+
   const handleAnalyze = () => {
     if (!imageFile) return;
     setAnalyzing(true);
@@ -153,7 +159,7 @@ const Analyze = () => {
                 </div>
 
                 <Tabs defaultValue="characterization" className="glass rounded-xl p-4">
-                  <TabsList className="w-full grid grid-cols-6 bg-secondary/40 h-auto">
+                  <TabsList className="w-full grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 bg-secondary/40 h-auto gap-1">
                     <TabsTrigger value="characterization">Characterization</TabsTrigger>
                     <TabsTrigger value="formulation">Formulation</TabsTrigger>
                     <TabsTrigger value="nanobio">Nano-Bio</TabsTrigger>
@@ -213,7 +219,8 @@ const Analyze = () => {
                     <div className="rounded-lg border border-border/40 p-4 bg-white">
                       <p className="font-semibold mb-3 text-foreground">2D Chemical Diagram</p>
                       <img
-                        src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(result.screeningMetrics.smiles)}/image?format=png`}
+                        key={result.screeningMetrics.smiles}
+                        src={analysisSmilesDiagramUrl}
                         alt={`2D chemical structure for ${result.screeningMetrics.smiles}`}
                         className="h-44 object-contain mx-auto"
                         onError={(event) => {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Atom, Target, Ruler, CircleDot, Layers, BrainCircuit } from "lucide-react";
+import { Play, Atom, Target, Ruler, CircleDot, Layers, BrainCircuit, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid } from "recharts";
 import ImageUploader from "@/components/ImageUploader";
@@ -22,6 +22,9 @@ const Analyze = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const modelConfidence = useMemo(() => {
     if (!result) return null;
@@ -46,24 +49,37 @@ const Analyze = () => {
   const handleAnalyze = () => {
     if (!imageFile) return;
     setAnalyzing(true);
+    setSaveMessage(null);
+    setSavedEntryId(null);
 
-    setTimeout(async () => {
-      try {
-        const nextResult = runMockAnalysis();
-        setResult(nextResult);
-        setAnalyzing(false);
-
-        const imageData = await toBase64(imageFile);
-        addHistoryEntry({
-          imageName: imageFile.name,
-          imageData,
-          result: nextResult,
-        });
-      } catch (error) {
-        console.error("Failed to save analysis history", error);
-        setAnalyzing(false);
-      }
+    setTimeout(() => {
+      const nextResult = runMockAnalysis();
+      setResult(nextResult);
+      setAnalyzing(false);
     }, 1200);
+  };
+
+  const handleSaveAnalysis = async () => {
+    if (!imageFile || !result || saving) return;
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const imageData = await toBase64(imageFile);
+      const saved = addHistoryEntry({
+        imageName: imageFile.name,
+        imageData,
+        result,
+      });
+
+      setSavedEntryId(saved.id);
+      setSaveMessage(`Saved successfully. Record ID: ${saved.id}`);
+    } catch (error) {
+      console.error("Failed to save analysis history", error);
+      setSaveMessage("Failed to save analysis. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -81,6 +97,8 @@ const Analyze = () => {
                 setImagePreview(url);
                 setImageFile(file);
                 setResult(null);
+                setSavedEntryId(null);
+                setSaveMessage(null);
               }}
             />
 
@@ -106,6 +124,16 @@ const Analyze = () => {
 
             {result && (
               <div className="glass rounded-xl p-4 space-y-3">
+                <Button
+                  onClick={handleSaveAnalysis}
+                  disabled={saving || Boolean(savedEntryId)}
+                  variant={savedEntryId ? "outline" : "default"}
+                  className="w-full gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? "Saving..." : savedEntryId ? "Saved to History" : "Save Analysis"}
+                </Button>
+                {saveMessage && <p className="text-xs text-muted-foreground break-all">{saveMessage}</p>}
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">ML Model</h3>
                 <p className="text-primary font-semibold">NanoVisionNet-X (Autoencoder + Morphology + Multimodal Heads)</p>
                 <p className="text-sm text-muted-foreground">Confidence: {modelConfidence}% (calibrated)</p>

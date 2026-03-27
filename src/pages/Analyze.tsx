@@ -133,11 +133,11 @@ const Analyze = () => {
             )}
 
             {analyzing && (
-              <div className="glass rounded-xl h-full flex items-center justify-center min-h-[400px]">
-                <div className="text-center">
+              <div className="glass rounded-xl h-full flex items-center justify-center min-h-[280px]">
+                <div className="text-center space-y-1">
                   <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
                   <p className="text-sm text-muted-foreground">Running reconstruction & segmentation pipeline...</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1 font-mono">Autoencoder → U-Net → Nanoparticle Analysis</p>
+                  <p className="text-xs text-muted-foreground/60 font-mono">Autoencoder → U-Net → Nanoparticle Analysis</p>
                 </div>
               </div>
             )}

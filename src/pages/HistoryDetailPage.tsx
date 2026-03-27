@@ -7,6 +7,37 @@ import { addHistoryEntry, getHistoryEntryById, updateHistoryEntry } from "@/lib/
 import { createOptimizedImageData, downloadOptimizedImage, optimizeForLowerRisk } from "@/lib/optimizer";
 import type { AnalysisResult } from "@/lib/mockAnalysis";
 
+const isStorageQuotaError = (error: unknown) =>
+  error instanceof DOMException && (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED");
+
+const compressDataUrlForStorage = (imageData: string, maxSide = 1200, quality = 0.72) =>
+  new Promise<string>((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => {
+      const longestSide = Math.max(image.width, image.height) || 1;
+      const scale = Math.min(1, maxSide / longestSide);
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        reject(new Error("Unable to initialize canvas context for optimization image compression."));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+
+    image.onerror = () => reject(new Error("Unable to compress optimized image data."));
+    image.src = imageData;
+  });
+
 const HistoryDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -62,44 +93,63 @@ const HistoryDetailPage = () => {
     const imageToSave = draftImage ?? entry.optimizedImageData ?? entry.imageData;
     const nameToSave = draftName || entry.optimizedName || `${entry.imageName.replace(/\.[^/.]+$/, "")}-optimized`;
     const snapshotImageName = nameToSave.includes(".") ? nameToSave : `${nameToSave}.png`;
+    setSaveMessage(null);
 
     if (!resultToSave) {
       setSaveMessage("Run optimization first before saving.");
       return;
     }
 
-    const saved = updateHistoryEntry(entry.id, (current) => ({
-      ...current,
-      optimizedResult: resultToSave,
-      optimizedImageData: imageToSave,
-      optimizedName: nameToSave,
-    }));
+    const persistWithImage = (optimizedImage: string) => {
+      const saved = updateHistoryEntry(entry.id, (current) => ({
+        ...current,
+        optimizedResult: resultToSave,
+        optimizedImageData: optimizedImage,
+        optimizedName: nameToSave,
+      }));
 
-    if (!saved) {
-      setSaveMessage("Unable to save optimized data.");
-      return;
+      if (!saved) {
+        throw new Error("Unable to save optimized data.");
+      }
+
+      const snapshot = addHistoryEntry({
+        imageName: snapshotImageName,
+        imageData: optimizedImage,
+        result: resultToSave,
+        optimizedResult: resultToSave,
+        optimizedImageData: optimizedImage,
+        optimizedName: nameToSave,
+      });
+
+      const verified = getHistoryEntryById(entry.id);
+      if (!verified?.optimizedResult) {
+        throw new Error("Save did not persist correctly. Please try again.");
+      }
+
+      setSaveMessage(`Optimized data saved successfully. Snapshot ID: ${snapshot.id}`);
+      setDraftResult(resultToSave);
+      setDraftImage(optimizedImage);
+      setDraftName(nameToSave);
+      setVersion((v) => v + 1);
+    };
+
+    try {
+      persistWithImage(imageToSave);
+    } catch (error) {
+      if (!isStorageQuotaError(error)) {
+        setSaveMessage(error instanceof Error ? error.message : "Unable to save optimized data.");
+        return;
+      }
+
+      compressDataUrlForStorage(imageToSave)
+        .then((compressed) => {
+          persistWithImage(compressed);
+        })
+        .catch((compressionError) => {
+          console.error("Failed to compress optimized image for storage", compressionError);
+          setSaveMessage("Unable to save optimized data. Storage may be full or blocked in this browser.");
+        });
     }
-
-    const snapshot = addHistoryEntry({
-      imageName: snapshotImageName,
-      imageData: imageToSave,
-      result: resultToSave,
-      optimizedResult: resultToSave,
-      optimizedImageData: imageToSave,
-      optimizedName: nameToSave,
-    });
-
-    const verified = getHistoryEntryById(entry.id);
-    if (!verified?.optimizedResult) {
-      setSaveMessage("Save did not persist correctly. Please try again.");
-      return;
-    }
-
-    setSaveMessage(`Optimized data saved successfully. Snapshot ID: ${snapshot.id}`);
-    setDraftResult(resultToSave);
-    setDraftImage(imageToSave);
-    setDraftName(nameToSave);
-    setVersion((v) => v + 1);
   };
 
   const shownResult = draftResult ?? entry.optimizedResult;

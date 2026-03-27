@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { WandSparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { getHistoryEntries, HISTORY_UPDATED_EVENT, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const OptimizationPage = () => {
   const [entries, setEntries] = useState<AnalysisHistoryEntry[]>([]);
@@ -17,13 +17,16 @@ const OptimizationPage = () => {
     const onVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
+    const onHistoryUpdated = () => refresh();
 
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener(HISTORY_UPDATED_EVENT, onHistoryUpdated);
 
     return () => {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener(HISTORY_UPDATED_EVENT, onHistoryUpdated);
     };
   }, []);
 

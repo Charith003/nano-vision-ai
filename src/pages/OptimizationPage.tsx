@@ -58,7 +58,8 @@ const OptimizationPage = () => {
               <div className="bg-secondary/40 rounded-lg p-2">Original risk: <strong>{entry.result.screeningMetrics.riskScore.toFixed(1)}</strong></div>
               <div className="bg-secondary/40 rounded-lg p-2">Optimized risk: <strong>{entry.optimizedResult?.screeningMetrics.riskScore.toFixed(1) ?? "-"}</strong></div>
             </div>
-            <p className="text-xs text-muted-foreground">Saved as: {entry.optimizedName ?? "not saved"}</p>
+            <p className="text-xs text-muted-foreground">Saved as: {entry.optimizedName ?? (entry.optimizedResult ? `${entry.imageName.replace(/\.[^/.]+$/, "")}-optimized` : "not saved")}</p>
+            <p className="text-[11px] text-muted-foreground/70">Record time: {new Date(entry.createdAt).toLocaleString()}</p>
           </div>
         ))}
       </div>

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Upload, FlaskConical, BarChart3, Atom, Microscope, ArrowRight } from "lucide-react";
+import { Upload, FlaskConical, BarChart3, Atom, Microscope, ArrowRight, TestTubeDiagonal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-microscopy.jpg";
 
@@ -24,6 +24,11 @@ const features = [
     icon: FlaskConical,
     title: "Drug Screening",
     desc: "Rank nanoparticle candidates by stability, uniformity, and interaction strength.",
+  },
+  {
+    icon: TestTubeDiagonal,
+    title: "Drug Prediction",
+    desc: "Fuse image, molecular, biological, and dynamic signals for multimodal discovery scoring.",
   },
 ];
 
@@ -90,7 +95,7 @@ const Index = () => (
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
           {features.map((f, i) => (
             <motion.div
               key={f.title}

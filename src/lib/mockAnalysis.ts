@@ -14,6 +14,7 @@ export interface AnalysisResult {
   particleSizes: { size: string; count: number }[];
   densityData: { region: string; density: number }[];
   radarData: { metric: string; value: number; fullMark: number }[];
+  dynamicsData: { t: string; diffusion: number; movement: number; cellResponse: number }[];
   screeningMetrics: {
     riskScore: number;
     multiFactorScore: number;
@@ -40,6 +41,25 @@ export interface AnalysisResult {
     thresholdGap: number;
     finalScreeningScore: number;
     modelHeadRisk: number;
+    smiles: string;
+    molecularWeight: number;
+    bindingAffinity: number;
+    solubility: number;
+    cellUptakeRate: number;
+    toxicityLabel: "Low" | "Moderate" | "High";
+    proteinInteraction: number;
+    targetReceptorBinding: number;
+    diffusionTrend: number;
+    movementTrend: number;
+    responseTrend: number;
+    formulationTransportScore: number;
+    predictedDrugEfficacy: number;
+    predictiveToxicityScore: number;
+    multiCriteriaScreeningScore: number;
+    dockingAffinity: number;
+    synthesisYield: number;
+    pharmacodynamicsIndex: number;
+    automatedDecision: "Promising Candidate" | "Needs Optimization" | "Reject";
   };
 }
 
@@ -87,6 +107,13 @@ export function runMockAnalysis(): AnalysisResult {
     { metric: "Density", value: Math.min(densityPerUnit * 5, 100), fullMark: 100 },
   ];
 
+  const dynamicsData = ["T0", "T1", "T2", "T3", "T4", "T5"].map((t, i) => ({
+    t,
+    diffusion: parseFloat(clamp(42 + i * 8 + Math.random() * 10).toFixed(1)),
+    movement: parseFloat(clamp(34 + i * 9 + Math.random() * 9).toFixed(1)),
+    cellResponse: parseFloat(clamp(38 + i * 7 + Math.random() * 8).toFixed(1)),
+  }));
+
   const riskScore = clamp(100 - (stabilityScore * 0.35 + uniformityScore * 0.25 + interactionStrength * 0.2 + (100 - aggregationScore * 100) * 0.2));
   const multiFactorScore = clamp(stabilityScore * 0.4 + uniformityScore * 0.3 + interactionStrength * 0.3);
   const areaComparisonScore = clamp(100 - stdArea * 0.7);
@@ -112,6 +139,28 @@ export function runMockAnalysis(): AnalysisResult {
   const thresholdGap = parseFloat((weightedScore - 62).toFixed(2));
   const finalScreeningScore = clamp(weightedScore - riskScore * 0.2);
   const modelHeadRisk = clamp(100 / (1 + Math.exp(-(riskScore - 45) / 8)));
+  const smiles = "CC(=O)OC1=CC=CC=C1C(=O)O";
+  const molecularWeight = parseFloat((180 + Math.random() * 620).toFixed(2));
+  const bindingAffinity = parseFloat((-5.2 - Math.random() * 6.4).toFixed(2));
+  const solubility = parseFloat((0.2 + Math.random() * 16).toFixed(2));
+  const cellUptakeRate = parseFloat(clamp(45 + Math.random() * 45).toFixed(1));
+  const toxicityLabel: AnalysisResult["screeningMetrics"]["toxicityLabel"] =
+    cytotoxicityRisk < 35 ? "Low" : cytotoxicityRisk < 62 ? "Moderate" : "High";
+  const proteinInteraction = parseFloat(clamp(interactionStrength + Math.random() * 10).toFixed(1));
+  const targetReceptorBinding = parseFloat(clamp(55 + Math.random() * 35).toFixed(1));
+  const latestDynamics = dynamicsData[dynamicsData.length - 1];
+  const diffusionTrend = parseFloat((latestDynamics?.diffusion ?? 0).toFixed(1));
+  const movementTrend = parseFloat((latestDynamics?.movement ?? 0).toFixed(1));
+  const responseTrend = parseFloat((latestDynamics?.cellResponse ?? 0).toFixed(1));
+  const formulationTransportScore = parseFloat(clamp((transportEfficiency + diffusionTrend) / 2).toFixed(1));
+  const predictedDrugEfficacy = parseFloat(clamp((bioavailabilityPrediction * 0.35) + (targetReceptorBinding * 0.25) + (proteinInteraction * 0.2) + (100 - cytotoxicityRisk) * 0.2).toFixed(1));
+  const predictiveToxicityScore = parseFloat(clamp(cytotoxicityRisk * 0.7 + modelHeadRisk * 0.3).toFixed(1));
+  const multiCriteriaScreeningScore = parseFloat(clamp(predictedDrugEfficacy * 0.65 + (100 - predictiveToxicityScore) * 0.35).toFixed(1));
+  const dockingAffinity = bindingAffinity;
+  const synthesisYield = parseFloat(clamp(weightedScore + (Math.random() * 8 - 4)).toFixed(1));
+  const pharmacodynamicsIndex = parseFloat(clamp((predictedDrugEfficacy + proteinInteraction + targetReceptorBinding) / 3).toFixed(1));
+  const automatedDecision: AnalysisResult["screeningMetrics"]["automatedDecision"] =
+    multiCriteriaScreeningScore >= 72 ? "Promising Candidate" : multiCriteriaScreeningScore >= 52 ? "Needs Optimization" : "Reject";
 
   return {
     nucleiCount,
@@ -129,6 +178,7 @@ export function runMockAnalysis(): AnalysisResult {
     particleSizes,
     densityData,
     radarData,
+    dynamicsData,
     screeningMetrics: {
       riskScore,
       multiFactorScore,
@@ -155,6 +205,25 @@ export function runMockAnalysis(): AnalysisResult {
       thresholdGap,
       finalScreeningScore,
       modelHeadRisk,
+      smiles,
+      molecularWeight,
+      bindingAffinity,
+      solubility,
+      cellUptakeRate,
+      toxicityLabel,
+      proteinInteraction,
+      targetReceptorBinding,
+      diffusionTrend,
+      movementTrend,
+      responseTrend,
+      formulationTransportScore,
+      predictedDrugEfficacy,
+      predictiveToxicityScore,
+      multiCriteriaScreeningScore,
+      dockingAffinity,
+      synthesisYield,
+      pharmacodynamicsIndex,
+      automatedDecision,
     },
   };
 }

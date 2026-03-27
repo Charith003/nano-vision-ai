@@ -10,6 +10,7 @@ import Screening from "./pages/Screening";
 import HistoryPage from "./pages/HistoryPage";
 import HistoryDetailPage from "./pages/HistoryDetailPage";
 import OptimizationPage from "./pages/OptimizationPage";
+import DrugPrediction from "./pages/DrugPrediction";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/history/:id" element={<HistoryDetailPage />} />
           <Route path="/optimization" element={<OptimizationPage />} />
+          <Route path="/drug-prediction" element={<DrugPrediction />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

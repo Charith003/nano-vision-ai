@@ -153,10 +153,11 @@ const Analyze = () => {
                 </div>
 
                 <Tabs defaultValue="characterization" className="glass rounded-xl p-4">
-                  <TabsList className="w-full grid grid-cols-5 bg-secondary/40 h-auto">
+                  <TabsList className="w-full grid grid-cols-6 bg-secondary/40 h-auto">
                     <TabsTrigger value="characterization">Characterization</TabsTrigger>
                     <TabsTrigger value="formulation">Formulation</TabsTrigger>
                     <TabsTrigger value="nanobio">Nano-Bio</TabsTrigger>
+                    <TabsTrigger value="drug">Drug Prediction</TabsTrigger>
                     <TabsTrigger value="screening">Screening</TabsTrigger>
                     <TabsTrigger value="advanced">Advanced</TabsTrigger>
                   </TabsList>
@@ -198,6 +199,38 @@ const Analyze = () => {
                     </div>
                   </TabsContent>
 
+                  <TabsContent value="drug" className="pt-3 space-y-4">
+                    <div className="grid md:grid-cols-4 gap-3 text-sm">
+                      <div className="rounded-lg bg-secondary/40 p-3 md:col-span-2">SMILES<br /><strong className="text-lg break-all">{result.screeningMetrics.smiles}</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Molecular weight<br /><strong className="text-3xl">{result.screeningMetrics.molecularWeight.toFixed(2)} Da</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Binding affinity<br /><strong className="text-3xl">{result.screeningMetrics.bindingAffinity.toFixed(2)} kcal/mol</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Solubility<br /><strong className="text-3xl">{result.screeningMetrics.solubility.toFixed(2)} mg/mL</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Cell uptake<br /><strong className="text-3xl">{result.screeningMetrics.cellUptakeRate.toFixed(1)}%</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Protein interaction<br /><strong className="text-3xl">{result.screeningMetrics.proteinInteraction.toFixed(1)}</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Target receptor binding<br /><strong className="text-3xl">{result.screeningMetrics.targetReceptorBinding.toFixed(1)}%</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Toxicity label<br /><strong className="text-3xl">{result.screeningMetrics.toxicityLabel}</strong></div>
+                    </div>
+                    <div className="rounded-lg border border-border/40 p-4">
+                      <p className="font-semibold mb-3">Time-Series Dynamics (Diffusion / Movement / Cell Response)</p>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <LineChart data={result.dynamicsData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 14%)" />
+                          <XAxis dataKey="t" stroke="hsl(215 15% 50%)" />
+                          <YAxis stroke="hsl(215 15% 50%)" domain={[0, 100]} />
+                          <Tooltip contentStyle={{ backgroundColor: "hsl(220 18% 7%)", border: "1px solid hsl(220 15% 14%)" }} />
+                          <Line type="monotone" dataKey="diffusion" stroke="hsl(190 90% 55%)" strokeWidth={2} />
+                          <Line type="monotone" dataKey="movement" stroke="hsl(280 70% 65%)" strokeWidth={2} />
+                          <Line type="monotone" dataKey="cellResponse" stroke="hsl(34 95% 60%)" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-3 text-sm">
+                      <div className="rounded-lg bg-secondary/40 p-3">Predicted efficacy<br /><strong className="text-4xl">{result.screeningMetrics.predictedDrugEfficacy.toFixed(1)}%</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Predictive toxicity<br /><strong className="text-4xl">{result.screeningMetrics.predictiveToxicityScore.toFixed(1)}%</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Decision engine<br /><strong className="text-4xl">{result.screeningMetrics.automatedDecision}</strong></div>
+                    </div>
+                  </TabsContent>
+
                   <TabsContent value="screening" className="pt-3 space-y-3">
                     <div className="rounded-xl border border-border/40 p-4 flex items-center justify-between">
                       <div>
@@ -220,8 +253,8 @@ const Analyze = () => {
                     <div className="grid md:grid-cols-2 gap-3 text-sm">
                       <div className="rounded-lg bg-secondary/40 p-3">Drug synthesis simulation yield<br /><strong className="text-4xl">{Math.round(result.screeningMetrics.weightedScore)}%</strong></div>
                       <div className="rounded-lg bg-secondary/40 p-3">Molecular interaction model<br /><strong className="text-4xl">{result.screeningMetrics.featureVectorIntegration.toFixed(1)}</strong></div>
-                      <div className="rounded-lg bg-secondary/40 p-3">Pharmacodynamics index<br /><strong className="text-4xl">{(result.screeningMetrics.transportEfficiency + 8).toFixed(1)}</strong></div>
-                      <div className="rounded-lg bg-secondary/40 p-3">Docking affinity<br /><strong className="text-4xl">-{(8 + result.aggregationScore * 8).toFixed(2)} kcal/mol</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Pharmacodynamics index<br /><strong className="text-4xl">{result.screeningMetrics.pharmacodynamicsIndex.toFixed(1)}</strong></div>
+                      <div className="rounded-lg bg-secondary/40 p-3">Docking affinity<br /><strong className="text-4xl">{result.screeningMetrics.dockingAffinity.toFixed(2)} kcal/mol</strong></div>
                       <div className="rounded-lg bg-secondary/40 p-3">Patient-level outcome<br /><strong className="text-4xl">{Math.round(result.screeningMetrics.finalScreeningScore)}%</strong></div>
                       <div className="rounded-lg bg-secondary/40 p-3 flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-primary" />Multimodal fusion score<br /><strong className="text-4xl">{(result.screeningMetrics.featureVectorIntegration - 8).toFixed(1)}</strong></div>
                     </div>

@@ -35,6 +35,7 @@ const DrugPrediction = () => {
   const [responseTrend, setResponseTrend] = useState(69);
   const [open, setOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [runMessage, setRunMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const entries = getHistoryEntries();
@@ -269,6 +270,11 @@ const DrugPrediction = () => {
     }
   };
 
+  const runPrediction = () => {
+    setRunMessage(`Prediction run complete for ${sampleName || "candidate"}.`);
+    setOpen(true);
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6 space-y-6">
@@ -364,8 +370,8 @@ const DrugPrediction = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Button className="gradient-primary text-primary-foreground gap-2" onClick={() => setOpen(true)}>
-              <Sparkles className="w-4 h-4" /> Generate Drug Prediction Output
+            <Button className="gradient-primary text-primary-foreground gap-2" onClick={runPrediction}>
+              <Sparkles className="w-4 h-4" /> Run Prediction
             </Button>
             <p className="text-xs text-muted-foreground">
               {history.length > 0
@@ -373,6 +379,7 @@ const DrugPrediction = () => {
                 : "No analysis history found yet. Enter values manually."}
             </p>
             {saveMessage && <p className="text-xs text-primary">{saveMessage}</p>}
+            {runMessage && <p className="text-xs text-accent">{runMessage}</p>}
           </div>
         </div>
 

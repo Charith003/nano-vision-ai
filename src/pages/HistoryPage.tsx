@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Database, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { clearDrugPredictionHistory, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
 import { clearHistoryEntries, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
@@ -10,6 +11,7 @@ import { clearHistoryEntries, deleteHistoryEntry, getHistoryEntries, type Analys
 const HistoryPage = () => {
   const [analysisEntries, setAnalysisEntries] = useState<AnalysisHistoryEntry[]>([]);
   const [predictionEntries, setPredictionEntries] = useState<DrugPredictionRecord[]>([]);
+  const [activePrediction, setActivePrediction] = useState<DrugPredictionRecord | null>(null);
 
   const refresh = () => {
     setAnalysisEntries(getHistoryEntries());
@@ -127,7 +129,11 @@ const HistoryPage = () => {
             ) : (
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {predictionEntries.map((entry) => (
-                  <article key={entry.id} className="glass rounded-xl p-4 space-y-3 text-sm">
+                  <article
+                    key={entry.id}
+                    className="glass rounded-xl p-4 space-y-3 text-sm cursor-pointer hover:box-glow transition-all"
+                    onClick={() => setActivePrediction(entry)}
+                  >
                     <div>
                       <p className="font-semibold truncate">{entry.sampleName}</p>
                       <p className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</p>
@@ -143,7 +149,15 @@ const HistoryPage = () => {
                       Decision: <strong>{entry.outputs.decision}</strong> · Multi-factor: <strong>{entry.outputs.multiFactorScore}</strong>
                     </div>
                     <div className="flex justify-end">
-                      <Button size="sm" variant="outline" className="gap-1 h-7 px-2" onClick={() => removePredictionItem(entry.id)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 h-7 px-2"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removePredictionItem(entry.id);
+                        }}
+                      >
                         <Trash2 className="w-3 h-3" /> Delete
                       </Button>
                     </div>
@@ -153,6 +167,31 @@ const HistoryPage = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        <Dialog open={Boolean(activePrediction)} onOpenChange={(open) => !open && setActivePrediction(null)}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Prediction File Details</DialogTitle>
+            </DialogHeader>
+            {activePrediction && (
+              <div className="grid md:grid-cols-2 gap-3 text-sm max-h-[65vh] overflow-auto pr-1">
+                <div className="rounded-md bg-secondary/40 p-3">Sample<br /><strong>{activePrediction.sampleName}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Created<br /><strong>{new Date(activePrediction.createdAt).toLocaleString()}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3 md:col-span-2 break-all">SMILES<br /><strong>{activePrediction.smiles}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Efficacy<br /><strong>{activePrediction.outputs.predictedEfficacy}%</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Toxicity<br /><strong>{activePrediction.outputs.predictiveToxicity}%</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Decision<br /><strong>{activePrediction.outputs.decision}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Multi-factor<br /><strong>{activePrediction.outputs.multiFactorScore}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Docking score<br /><strong>{activePrediction.outputs.compoundDockingScore} kcal/mol</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Reference docking<br /><strong>{activePrediction.outputs.referenceDockingScore} kcal/mol</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Confidence<br /><strong>{activePrediction.outputs.predictionConfidence}%</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Model uncertainty<br /><strong>{activePrediction.outputs.modelUncertainty}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Lipinski<br /><strong>{activePrediction.outputs.lipinskiCompliance}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3">Lead-likeness<br /><strong>{activePrediction.outputs.leadLikeness}</strong></div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

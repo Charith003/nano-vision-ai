@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Trash2 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { Button } from "@/components/ui/button";
+import { deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const sections = [
   { key: "overview", title: "Screening Module Overview" },
@@ -12,6 +13,7 @@ const sections = [
   { key: "reconstruction", title: "Reconstruction Quality Assessment" },
   { key: "interaction", title: "Nano–Bio Interaction Indicators" },
   { key: "formulation", title: "Formulation Stability Evaluation" },
+  { key: "drug", title: "Drug Prediction (Multimodal)" },
   { key: "aggregation", title: "Aggregation Behavior Analysis" },
   { key: "risk", title: "Multi-Factor Risk Score Calculation" },
   { key: "classification", title: "Screening Decision Classification" },
@@ -46,6 +48,13 @@ const Screening = () => {
     setSelectedIds((prev) => (checked ? [...new Set([...prev, id])] : prev.filter((item) => item !== id)));
   };
 
+  const deleteSample = (id: string) => {
+    deleteHistoryEntry(id);
+    const entries = getHistoryEntries();
+    setHistory(entries);
+    setSelectedIds((prev) => prev.filter((value) => value !== id));
+  };
+
   const sectionRows = (section: string, sample: AnalysisHistoryEntry) => {
     const s = sample.result;
     switch (section) {
@@ -59,6 +68,8 @@ const Screening = () => {
         return `Mem ${s.screeningMetrics.membraneInteractionScore.toFixed(1)} · Cyto ${s.screeningMetrics.cytotoxicityRisk.toFixed(1)} · Zeta ${s.screeningMetrics.zetaPotentialProxy.toFixed(1)}`;
       case "formulation":
         return `Diff ${s.screeningMetrics.diffusionCoefficient.toFixed(3)} · Transport ${s.screeningMetrics.transportEfficiency.toFixed(1)} · Bio ${s.screeningMetrics.bioavailabilityPrediction.toFixed(1)}`;
+      case "drug":
+        return `Efficacy ${s.screeningMetrics.predictedDrugEfficacy.toFixed(1)} · Toxicity ${s.screeningMetrics.predictiveToxicityScore.toFixed(1)} · ${s.screeningMetrics.automatedDecision}`;
       case "aggregation":
         return `Cluster ${s.screeningMetrics.clusterFormation.toFixed(1)} · Density Δ ${s.screeningMetrics.densityVariation.toFixed(1)} · Overlap ${s.screeningMetrics.particleOverlap.toFixed(1)}`;
       case "risk":
@@ -93,16 +104,23 @@ const Screening = () => {
               <h3 className="font-semibold mb-4">Select samples from history</h3>
               <div className="grid md:grid-cols-3 gap-3">
                 {history.map((entry) => (
-                  <label key={entry.id} className="flex items-start gap-2 rounded-lg border border-border/40 p-3 cursor-pointer bg-secondary/20">
-                    <Checkbox
-                      checked={selectedIds.includes(entry.id)}
-                      onCheckedChange={(checked) => toggleSelection(entry.id, Boolean(checked))}
-                    />
-                    <span className="text-sm">
-                      <span className="font-medium block truncate">{entry.imageName}</span>
-                      <span className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleDateString()}</span>
-                    </span>
-                  </label>
+                  <div key={entry.id} className="rounded-lg border border-border/40 p-3 bg-secondary/20 space-y-2">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={selectedIds.includes(entry.id)}
+                        onCheckedChange={(checked) => toggleSelection(entry.id, Boolean(checked))}
+                      />
+                      <span className="text-sm">
+                        <span className="font-medium block truncate">{entry.imageName}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleDateString()}</span>
+                      </span>
+                    </label>
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="outline" className="h-7 px-2 gap-1" onClick={() => deleteSample(entry.id)}>
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

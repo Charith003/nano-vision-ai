@@ -3,75 +3,156 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Database, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { clearHistoryEntries, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { clearDrugPredictionHistory, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
+import { clearHistoryEntries, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const HistoryPage = () => {
-  const [entries, setEntries] = useState<AnalysisHistoryEntry[]>([]);
+  const [analysisEntries, setAnalysisEntries] = useState<AnalysisHistoryEntry[]>([]);
+  const [predictionEntries, setPredictionEntries] = useState<DrugPredictionRecord[]>([]);
+
+  const refresh = () => {
+    setAnalysisEntries(getHistoryEntries());
+    setPredictionEntries(getDrugPredictionHistory());
+  };
 
   useEffect(() => {
-    setEntries(getHistoryEntries());
+    refresh();
   }, []);
 
-  const clearHistory = () => {
+  const clearAnalysis = () => {
     clearHistoryEntries();
-    setEntries([]);
+    setAnalysisEntries([]);
+  };
+
+  const clearPrediction = () => {
+    clearDrugPredictionHistory();
+    setPredictionEntries([]);
+  };
+
+  const removeAnalysisItem = (id: string) => {
+    deleteHistoryEntry(id);
+    setAnalysisEntries(getHistoryEntries());
+  };
+
+  const removePredictionItem = (id: string) => {
+    deleteDrugPredictionRecord(id);
+    setPredictionEntries(getDrugPredictionHistory());
   };
 
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-end justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Analysis History</h1>
-            <p className="text-muted-foreground">Stored image uploads with AI results.</p>
-          </div>
-          {entries.length > 0 && (
-            <Button variant="outline" onClick={clearHistory} className="gap-2">
-              <Trash2 className="w-4 h-4" /> Clear History
-            </Button>
-          )}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">History</h1>
+          <p className="text-muted-foreground">Separate tabs for microscopy analysis records and drug prediction records.</p>
         </motion.div>
 
-        {entries.length === 0 ? (
-          <div className="glass rounded-xl flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Database className="w-8 h-8 text-primary/40" />
-              </div>
-              <p className="text-muted-foreground mb-2">No analysis history yet</p>
-              <p className="text-xs text-muted-foreground/60">Run analysis from the Analyze page to build your local database history.</p>
+        <Tabs defaultValue="analysis" className="space-y-4">
+          <TabsList className="grid w-full md:w-[420px] grid-cols-2">
+            <TabsTrigger value="analysis">Analysis History</TabsTrigger>
+            <TabsTrigger value="prediction">Prediction History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="analysis" className="space-y-4">
+            <div className="flex justify-end">
+              {analysisEntries.length > 0 && (
+                <Button variant="outline" onClick={clearAnalysis} className="gap-2">
+                  <Trash2 className="w-4 h-4" /> Clear Analysis History
+                </Button>
+              )}
             </div>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {entries.map((entry) => (
-              <article key={entry.id} className="glass rounded-xl p-4 space-y-3">
-                <Link to={`/history/${entry.id}`}>
-                  <img src={entry.imageData} alt={entry.imageName} className="w-full h-44 rounded-lg object-cover border border-border/40 hover:border-primary/50 transition-colors" />
-                </Link>
-                <div>
-                  <p className="font-medium truncate">{entry.imageName}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</p>
+
+            {analysisEntries.length === 0 ? (
+              <div className="glass rounded-xl flex items-center justify-center min-h-[320px]">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Database className="w-8 h-8 text-primary/40" />
+                  </div>
+                  <p className="text-muted-foreground mb-2">No analysis history yet</p>
+                  <p className="text-xs text-muted-foreground/60">Run analysis from the Analyze page to build your local database history.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-md bg-secondary/50 p-2">
-                    <span className="text-muted-foreground block">Decision</span>
-                    <span className="font-semibold">{entry.result.screeningDecision}</span>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {analysisEntries.map((entry) => (
+                  <article key={entry.id} className="glass rounded-xl p-4 space-y-3">
+                    <Link to={`/history/${entry.id}`}>
+                      <img src={entry.imageData} alt={entry.imageName} className="w-full h-44 rounded-lg object-cover border border-border/40 hover:border-primary/50 transition-colors" />
+                    </Link>
+                    <div>
+                      <p className="font-medium truncate">{entry.imageName}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-md bg-secondary/50 p-2">
+                        <span className="text-muted-foreground block">Decision</span>
+                        <span className="font-semibold">{entry.result.screeningDecision}</span>
+                      </div>
+                      <div className="rounded-md bg-secondary/50 p-2">
+                        <span className="text-muted-foreground block">Risk Score</span>
+                        <span className="font-semibold">{entry.result.screeningMetrics.riskScore.toFixed(1)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="outline" className="gap-1 h-7 px-2" onClick={() => removeAnalysisItem(entry.id)}>
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="prediction" className="space-y-4">
+            <div className="flex justify-end">
+              {predictionEntries.length > 0 && (
+                <Button variant="outline" onClick={clearPrediction} className="gap-2">
+                  <Trash2 className="w-4 h-4" /> Clear Prediction History
+                </Button>
+              )}
+            </div>
+
+            {predictionEntries.length === 0 ? (
+              <div className="glass rounded-xl flex items-center justify-center min-h-[320px]">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Database className="w-8 h-8 text-primary/40" />
                   </div>
-                  <div className="rounded-md bg-secondary/50 p-2">
-                    <span className="text-muted-foreground block">Risk Score</span>
-                    <span className="font-semibold">{entry.result.screeningMetrics.riskScore.toFixed(1)}</span>
-                  </div>
+                  <p className="text-muted-foreground mb-2">No drug prediction history yet</p>
+                  <p className="text-xs text-muted-foreground/60">Generate and save outputs from the Drug Prediction tab.</p>
                 </div>
-                {entry.optimizedResult && (
-                  <div className="rounded-md bg-primary/10 border border-primary/30 p-2 text-xs">
-                    Optimized risk: <span className="font-semibold">{entry.optimizedResult.screeningMetrics.riskScore.toFixed(1)}</span>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-        )}
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {predictionEntries.map((entry) => (
+                  <article key={entry.id} className="glass rounded-xl p-4 space-y-3 text-sm">
+                    <div>
+                      <p className="font-semibold truncate">{entry.sampleName}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</p>
+                    </div>
+                    <p className="text-xs break-all text-muted-foreground">SMILES: {entry.smiles}</p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-md bg-secondary/50 p-2">Efficacy: <strong>{entry.outputs.predictedEfficacy}%</strong></div>
+                      <div className="rounded-md bg-secondary/50 p-2">Toxicity: <strong>{entry.outputs.predictiveToxicity}%</strong></div>
+                      <div className="rounded-md bg-secondary/50 p-2">Docking: <strong>{entry.outputs.compoundDockingScore}</strong></div>
+                      <div className="rounded-md bg-secondary/50 p-2">Confidence: <strong>{entry.outputs.predictionConfidence}%</strong></div>
+                    </div>
+                    <div className="rounded-md bg-primary/10 border border-primary/30 p-2 text-xs">
+                      Decision: <strong>{entry.outputs.decision}</strong> · Multi-factor: <strong>{entry.outputs.multiFactorScore}</strong>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="outline" className="gap-1 h-7 px-2" onClick={() => removePredictionItem(entry.id)}>
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

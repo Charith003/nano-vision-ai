@@ -54,6 +54,14 @@ export function getHistoryEntryById(id: string): AnalysisHistoryEntry | null {
   return getHistoryEntries().find((entry) => entry.id === id) ?? null;
 }
 
+export function deleteHistoryEntry(id: string): boolean {
+  const entries = getHistoryEntries();
+  const filtered = entries.filter((entry) => entry.id !== id);
+  if (filtered.length === entries.length) return false;
+  saveEntries(filtered);
+  return true;
+}
+
 export function clearHistoryEntries() {
   localStorage.removeItem(STORAGE_KEY);
 }

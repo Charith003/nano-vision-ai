@@ -128,6 +128,12 @@ const HistoryPage = () => {
                         <span className="font-semibold">{entry.result.screeningMetrics.riskScore.toFixed(1)}</span>
                       </div>
                     </div>
+                    {entry.optimizedResult && (
+                      <div className="rounded-md bg-primary/10 border border-primary/30 p-2 text-xs">
+                        Optimized saved · Risk: <strong>{entry.optimizedResult.screeningMetrics.riskScore.toFixed(1)}</strong>
+                        {entry.optimizedName ? <> · Name: <strong>{entry.optimizedName}</strong></> : null}
+                      </div>
+                    )}
                     <div className="flex justify-end">
                       <Button size="sm" variant="outline" className="gap-1 h-7 px-2" onClick={() => removeAnalysisItem(entry.id)}>
                         <Trash2 className="w-3 h-3" /> Delete

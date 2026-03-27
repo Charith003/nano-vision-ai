@@ -89,7 +89,16 @@ const HistoryDetailPage = () => {
       }));
     });
 
+    const verified = getHistoryEntryById(entry.id);
+    if (!verified?.optimizedResult) {
+      setSaveMessage("Save did not persist correctly. Please try again.");
+      return;
+    }
+
     setSaveMessage("Optimized data saved successfully.");
+    setDraftResult(resultToSave);
+    setDraftImage(imageToSave);
+    setDraftName(nameToSave);
     setVersion((v) => v + 1);
   };
 

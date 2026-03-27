@@ -6,8 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { addDrugPredictionRecord, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
-import { deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { DRUG_PREDICTION_UPDATED_EVENT, addDrugPredictionRecord, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
+import { HISTORY_UPDATED_EVENT, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const toSafeNumber = (value: unknown, fallback: number) => {
   const n = Number(value);
@@ -41,14 +41,23 @@ const DrugPrediction = () => {
   const [diagramSrc, setDiagramSrc] = useState("");
 
   useEffect(() => {
-    const entries = getHistoryEntries();
-    setHistory(entries);
-    setPredictionHistory(getDrugPredictionHistory());
+    const refreshData = () => {
+      const entries = getHistoryEntries();
+      setHistory(entries);
+      setPredictionHistory(getDrugPredictionHistory());
 
-    const firstId = entries[0]?.id;
-    if (firstId) {
-      setSelectedAnalysisId(firstId);
-    }
+      const firstId = entries[0]?.id;
+      setSelectedAnalysisId((current) => current || firstId || "");
+    };
+
+    refreshData();
+    window.addEventListener(HISTORY_UPDATED_EVENT, refreshData);
+    window.addEventListener(DRUG_PREDICTION_UPDATED_EVENT, refreshData);
+
+    return () => {
+      window.removeEventListener(HISTORY_UPDATED_EVENT, refreshData);
+      window.removeEventListener(DRUG_PREDICTION_UPDATED_EVENT, refreshData);
+    };
   }, []);
 
   const filteredHistory = useMemo(() => {

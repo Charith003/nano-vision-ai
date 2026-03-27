@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { clearDrugPredictionHistory, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
-import { clearHistoryEntries, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { DRUG_PREDICTION_UPDATED_EVENT, clearDrugPredictionHistory, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
+import { HISTORY_UPDATED_EVENT, clearHistoryEntries, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const HistoryPage = () => {
   const [analysisEntries, setAnalysisEntries] = useState<AnalysisHistoryEntry[]>([]);
@@ -23,6 +23,16 @@ const HistoryPage = () => {
 
   useEffect(() => {
     refresh();
+
+    const onHistoryUpdated = () => refresh();
+    const onPredictionUpdated = () => refresh();
+    window.addEventListener(HISTORY_UPDATED_EVENT, onHistoryUpdated);
+    window.addEventListener(DRUG_PREDICTION_UPDATED_EVENT, onPredictionUpdated);
+
+    return () => {
+      window.removeEventListener(HISTORY_UPDATED_EVENT, onHistoryUpdated);
+      window.removeEventListener(DRUG_PREDICTION_UPDATED_EVENT, onPredictionUpdated);
+    };
   }, []);
 
   const clearAnalysis = () => {

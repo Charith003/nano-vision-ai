@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { HISTORY_UPDATED_EVENT, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const sections = [
   { key: "overview", title: "Screening Module Overview" },
@@ -29,9 +29,22 @@ const Screening = () => {
   const [openSection, setOpenSection] = useState<(typeof sections)[number]["key"] | null>(null);
 
   useEffect(() => {
-    const entries = getHistoryEntries();
-    setHistory(entries);
-    setSelectedIds(entries.map((entry) => entry.id));
+    const refreshHistory = () => {
+      const entries = getHistoryEntries();
+      setHistory(entries);
+      setSelectedIds((prev) => {
+        const existingIds = new Set(entries.map((entry) => entry.id));
+        const kept = prev.filter((id) => existingIds.has(id));
+        return kept.length > 0 ? kept : entries.map((entry) => entry.id);
+      });
+    };
+
+    refreshHistory();
+    window.addEventListener(HISTORY_UPDATED_EVENT, refreshHistory);
+
+    return () => {
+      window.removeEventListener(HISTORY_UPDATED_EVENT, refreshHistory);
+    };
   }, []);
 
   const selectedSamples = useMemo(

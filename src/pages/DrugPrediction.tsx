@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FlaskConical, Sparkles, TestTubeDiagonal } from "lucide-react";
+import { Sparkles, TestTubeDiagonal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+
+const toSafeNumber = (value: unknown, fallback: number) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 const DrugPrediction = () => {
   const [history, setHistory] = useState<AnalysisHistoryEntry[]>([]);
@@ -25,19 +30,19 @@ const DrugPrediction = () => {
     const entries = getHistoryEntries();
     setHistory(entries);
 
-    const latest = entries[0]?.result.screeningMetrics;
+    const latest = entries[0]?.result?.screeningMetrics;
     if (!latest) return;
 
-    setSmiles(latest.smiles);
-    setMolecularWeight(latest.molecularWeight);
-    setBindingAffinity(latest.bindingAffinity);
-    setSolubility(latest.solubility);
-    setCellUptakeRate(latest.cellUptakeRate);
-    setProteinInteraction(latest.proteinInteraction);
-    setTargetReceptorBinding(latest.targetReceptorBinding);
-    setDiffusionTrend(latest.diffusionTrend);
-    setMovementTrend(latest.movementTrend);
-    setResponseTrend(latest.responseTrend);
+    setSmiles(typeof latest.smiles === "string" && latest.smiles.length > 0 ? latest.smiles : "CC(=O)OC1=CC=CC=C1C(=O)O");
+    setMolecularWeight(toSafeNumber(latest.molecularWeight, 320));
+    setBindingAffinity(toSafeNumber(latest.bindingAffinity, -8.2));
+    setSolubility(toSafeNumber(latest.solubility, 4.1));
+    setCellUptakeRate(toSafeNumber(latest.cellUptakeRate, 65));
+    setProteinInteraction(toSafeNumber(latest.proteinInteraction, 70));
+    setTargetReceptorBinding(toSafeNumber(latest.targetReceptorBinding, 72));
+    setDiffusionTrend(toSafeNumber(latest.diffusionTrend, 74));
+    setMovementTrend(toSafeNumber(latest.movementTrend, 71));
+    setResponseTrend(toSafeNumber(latest.responseTrend, 69));
   }, []);
 
   const prediction = useMemo(() => {

@@ -5,6 +5,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const sections = [
@@ -23,6 +24,7 @@ const sections = [
 
 const Screening = () => {
   const [history, setHistory] = useState<AnalysisHistoryEntry[]>([]);
+  const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [openSection, setOpenSection] = useState<(typeof sections)[number]["key"] | null>(null);
 
@@ -36,6 +38,12 @@ const Screening = () => {
     () => history.filter((entry) => selectedIds.includes(entry.id)),
     [history, selectedIds],
   );
+
+  const filteredHistory = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return history;
+    return history.filter((entry) => entry.imageName.toLowerCase().includes(query));
+  }, [history, search]);
 
   const comparisonData = selectedSamples.map((sample) => ({
     id: sample.imageName.slice(0, 16),
@@ -102,8 +110,14 @@ const Screening = () => {
           <>
             <div className="glass rounded-xl p-5">
               <h3 className="font-semibold mb-4">Select samples from history</h3>
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search sample name"
+                className="mb-3"
+              />
               <div className="grid md:grid-cols-3 gap-3">
-                {history.map((entry) => (
+                {filteredHistory.map((entry) => (
                   <div key={entry.id} className="rounded-lg border border-border/40 p-3 bg-secondary/20 space-y-2 min-w-0">
                     <label className="flex items-start gap-2 cursor-pointer min-w-0">
                       <Checkbox
@@ -123,6 +137,7 @@ const Screening = () => {
                   </div>
                 ))}
               </div>
+              {filteredHistory.length === 0 && <p className="text-xs text-muted-foreground mt-2">No matching samples found.</p>}
             </div>
 
             {selectedSamples.length > 0 && (

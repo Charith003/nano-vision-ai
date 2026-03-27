@@ -22,6 +22,7 @@ const DrugPrediction = () => {
   const [predictionHistory, setPredictionHistory] = useState<DrugPredictionRecord[]>([]);
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>("");
   const [selectedAnalysisMode, setSelectedAnalysisMode] = useState<"original" | "optimized">("original");
+  const [historySearch, setHistorySearch] = useState("");
   const [sampleName, setSampleName] = useState("candidate-001");
   const [smiles, setSmiles] = useState("CC(=O)OC1=CC=CC=C1C(=O)O");
   const [molecularWeight, setMolecularWeight] = useState(320);
@@ -49,6 +50,12 @@ const DrugPrediction = () => {
       setSelectedAnalysisId(firstId);
     }
   }, []);
+
+  const filteredHistory = useMemo(() => {
+    const query = historySearch.trim().toLowerCase();
+    if (!query) return history;
+    return history.filter((entry) => entry.imageName.toLowerCase().includes(query));
+  }, [history, historySearch]);
 
   const hydrateFromAnalysis = (analysisId: string, mode: "original" | "optimized") => {
     if (!analysisId) return false;
@@ -194,9 +201,11 @@ const DrugPrediction = () => {
   }, [smilesDiagramPrimaryUrl]);
 
   const runSampleSync = () => {
+    const latestHistory = getHistoryEntries();
+    setHistory(latestHistory);
     const synced = hydrateFromAnalysis(selectedAnalysisId, selectedAnalysisMode);
     if (!synced) {
-      setSyncMessage("No history sample is available to sync.");
+      setSyncMessage("Sample sync failed. Please choose a valid history sample and source, then run again.");
       return;
     }
 
@@ -309,18 +318,30 @@ const DrugPrediction = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Load Analysis from History</Label>
+              <Input
+                value={historySearch}
+                onChange={(event) => setHistorySearch(event.target.value)}
+                placeholder="Search history sample name"
+              />
               <Select value={selectedAnalysisId || undefined} onValueChange={setSelectedAnalysisId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select history record" />
                 </SelectTrigger>
                 <SelectContent>
-                  {history.map((entry) => (
-                    <SelectItem key={entry.id} value={entry.id}>
-                      {entry.imageName}
+                  {filteredHistory.length > 0 ? (
+                    filteredHistory.map((entry) => (
+                      <SelectItem key={entry.id} value={entry.id}>
+                        {entry.imageName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-match" disabled>
+                      No matching history record
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">{filteredHistory.length} sample(s) matched.</p>
             </div>
             <div className="space-y-2">
               <Label>History Source</Label>

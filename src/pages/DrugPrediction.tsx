@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Download, Save, Sparkles, TestTubeDiagonal, Trash2 } from "lucide-react";
+import { Download, RefreshCcw, Save, Sparkles, TestTubeDiagonal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,8 @@ const DrugPrediction = () => {
   const [open, setOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [runMessage, setRunMessage] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [diagramSrc, setDiagramSrc] = useState("");
 
   useEffect(() => {
     const entries = getHistoryEntries();
@@ -48,16 +50,16 @@ const DrugPrediction = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (!selectedAnalysisId) return;
-    const source = history.find((entry) => entry.id === selectedAnalysisId);
-    if (!source) return;
+  const hydrateFromAnalysis = (analysisId: string, mode: "original" | "optimized") => {
+    if (!analysisId) return false;
+    const source = history.find((entry) => entry.id === analysisId);
+    if (!source) return false;
 
-    const result = selectedAnalysisMode === "optimized" && source.optimizedResult ? source.optimizedResult : source.result;
+    const result = mode === "optimized" && source.optimizedResult ? source.optimizedResult : source.result;
     const latest = result?.screeningMetrics;
-    if (!latest) return;
+    if (!latest) return false;
 
-    const suffix = selectedAnalysisMode === "optimized" ? "-optimized" : "";
+    const suffix = mode === "optimized" ? "-optimized" : "";
     setSampleName(`${source.imageName.replace(/\.[^/.]+$/, "")}${suffix}`);
     setSmiles(typeof latest.smiles === "string" && latest.smiles.length > 0 ? latest.smiles : "CC(=O)OC1=CC=CC=C1C(=O)O");
     setMolecularWeight(toSafeNumber(latest.molecularWeight, 320));
@@ -69,6 +71,11 @@ const DrugPrediction = () => {
     setDiffusionTrend(toSafeNumber(latest.diffusionTrend, 74));
     setMovementTrend(toSafeNumber(latest.movementTrend, 71));
     setResponseTrend(toSafeNumber(latest.responseTrend, 69));
+    return true;
+  };
+
+  useEffect(() => {
+    hydrateFromAnalysis(selectedAnalysisId, selectedAnalysisMode);
   }, [history, selectedAnalysisId, selectedAnalysisMode]);
 
   const prediction = useMemo(() => {
@@ -179,7 +186,22 @@ const DrugPrediction = () => {
     targetReceptorBinding,
   ]);
 
-  const smilesDiagramUrl = `https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(smiles)}/image?format=png`;
+  const smilesDiagramPrimaryUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/${encodeURIComponent(smiles)}/PNG`;
+  const smilesDiagramFallbackUrl = `https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(smiles)}/image?format=png`;
+
+  useEffect(() => {
+    setDiagramSrc(smilesDiagramPrimaryUrl);
+  }, [smilesDiagramPrimaryUrl]);
+
+  const runSampleSync = () => {
+    const synced = hydrateFromAnalysis(selectedAnalysisId, selectedAnalysisMode);
+    if (!synced) {
+      setSyncMessage("No history sample is available to sync.");
+      return;
+    }
+
+    setSyncMessage(`Sample synced from ${selectedAnalysisMode === "optimized" ? "optimized" : "original"} analysis.`);
+  };
 
   const savePrediction = () => {
     addDrugPredictionRecord({
@@ -279,7 +301,7 @@ const DrugPrediction = () => {
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6 space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold mb-2">Drug Discovery analysis</h1>
+          <h1 className="text-3xl font-bold mb-2">Drug Discovery Analysis</h1>
           <p className="text-muted-foreground">Multimodal workspace combining image-derived morphology, molecular descriptors, nano-bio interactions, and temporal dynamics for publication-ready screening outputs.</p>
         </motion.div>
 
@@ -311,6 +333,9 @@ const DrugPrediction = () => {
                   <SelectItem value="optimized">Optimized Analysis</SelectItem>
                 </SelectContent>
               </Select>
+              <Button variant="outline" className="mt-2 gap-2" onClick={runSampleSync}>
+                <RefreshCcw className="w-4 h-4" /> Run Sample Sync
+              </Button>
             </div>
             <div className="space-y-2">
               <Label>Sample Name</Label>
@@ -323,10 +348,16 @@ const DrugPrediction = () => {
             <div className="md:col-span-2 rounded-lg border border-border/40 bg-white p-3">
               <p className="text-xs text-muted-foreground mb-2">2D Chemical Diagram</p>
               <img
-                src={smilesDiagramUrl}
+                key={smiles}
+                src={diagramSrc}
                 alt={`2D chemical structure for ${smiles}`}
                 className="h-40 object-contain mx-auto"
                 onError={(event) => {
+                  if (event.currentTarget.src !== smilesDiagramFallbackUrl) {
+                    event.currentTarget.src = smilesDiagramFallbackUrl;
+                    return;
+                  }
+
                   event.currentTarget.src = "https://placehold.co/480x220?text=SMILES+diagram+unavailable";
                 }}
               />
@@ -380,13 +411,16 @@ const DrugPrediction = () => {
             </p>
             {saveMessage && <p className="text-xs text-primary">{saveMessage}</p>}
             {runMessage && <p className="text-xs text-accent">{runMessage}</p>}
+            {syncMessage && <p className="text-xs text-muted-foreground">{syncMessage}</p>}
           </div>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-5xl max-h-[82vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><TestTubeDiagonal className="w-5 h-5 text-primary" /> Drug Prediction Result</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 break-words">
+                <TestTubeDiagonal className="w-5 h-5 text-primary" /> Drug Prediction Result — {sampleName || "Candidate"}
+              </DialogTitle>
             </DialogHeader>
 
             <div className="grid md:grid-cols-3 gap-3 text-sm">

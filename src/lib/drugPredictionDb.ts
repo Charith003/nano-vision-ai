@@ -45,6 +45,13 @@ export interface DrugPredictionRecord {
 }
 
 const STORAGE_KEY = "nano-vision-drug-prediction-history-v1";
+const DRUG_PREDICTION_UPDATED_EVENT = "nano-drug-prediction-updated";
+
+function notifyDrugPredictionUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(DRUG_PREDICTION_UPDATED_EVENT));
+  }
+}
 
 export function getDrugPredictionHistory(): DrugPredictionRecord[] {
   try {
@@ -71,11 +78,13 @@ export function addDrugPredictionRecord(entry: Omit<DrugPredictionRecord, "id" |
   const existing = getDrugPredictionHistory();
   const updated = [next, ...existing].slice(0, 100);
   saveDrugPredictionHistory(updated);
+  notifyDrugPredictionUpdated();
   return next;
 }
 
 export function clearDrugPredictionHistory() {
   localStorage.removeItem(STORAGE_KEY);
+  notifyDrugPredictionUpdated();
 }
 
 export function deleteDrugPredictionRecord(id: string): boolean {
@@ -83,5 +92,8 @@ export function deleteDrugPredictionRecord(id: string): boolean {
   const filtered = entries.filter((entry) => entry.id !== id);
   if (filtered.length === entries.length) return false;
   saveDrugPredictionHistory(filtered);
+  notifyDrugPredictionUpdated();
   return true;
 }
+
+export { DRUG_PREDICTION_UPDATED_EVENT };

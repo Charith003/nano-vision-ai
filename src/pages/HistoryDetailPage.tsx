@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Download, LoaderCircle, Save, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getHistoryEntryById, updateHistoryEntry } from "@/lib/historyDb";
+import { getHistoryEntries, getHistoryEntryById, updateHistoryEntry } from "@/lib/historyDb";
 import { createOptimizedImageData, downloadOptimizedImage, optimizeForLowerRisk } from "@/lib/optimizer";
 import type { AnalysisResult } from "@/lib/mockAnalysis";
 
@@ -79,7 +79,26 @@ const HistoryDetailPage = () => {
       return;
     }
 
+    const relatedEntries = getHistoryEntries().filter((item) => item.id !== entry.id && item.imageName === entry.imageName);
+    relatedEntries.forEach((related) => {
+      updateHistoryEntry(related.id, (current) => ({
+        ...current,
+        optimizedResult: resultToSave,
+        optimizedImageData: imageToSave,
+        optimizedName: current.optimizedName || nameToSave,
+      }));
+    });
+
+    const verified = getHistoryEntryById(entry.id);
+    if (!verified?.optimizedResult) {
+      setSaveMessage("Save did not persist correctly. Please try again.");
+      return;
+    }
+
     setSaveMessage("Optimized data saved successfully.");
+    setDraftResult(resultToSave);
+    setDraftImage(imageToSave);
+    setDraftName(nameToSave);
     setVersion((v) => v + 1);
   };
 

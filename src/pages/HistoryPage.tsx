@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Database, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { clearDrugPredictionHistory, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
 import { clearHistoryEntries, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
@@ -12,6 +13,8 @@ const HistoryPage = () => {
   const [analysisEntries, setAnalysisEntries] = useState<AnalysisHistoryEntry[]>([]);
   const [predictionEntries, setPredictionEntries] = useState<DrugPredictionRecord[]>([]);
   const [activePrediction, setActivePrediction] = useState<DrugPredictionRecord | null>(null);
+  const [analysisSearch, setAnalysisSearch] = useState("");
+  const [predictionSearch, setPredictionSearch] = useState("");
 
   const refresh = () => {
     setAnalysisEntries(getHistoryEntries());
@@ -42,6 +45,20 @@ const HistoryPage = () => {
     setPredictionEntries(getDrugPredictionHistory());
   };
 
+  const filteredAnalysisEntries = useMemo(() => {
+    const query = analysisSearch.trim().toLowerCase();
+    if (!query) return analysisEntries;
+    return analysisEntries.filter((entry) => entry.imageName.toLowerCase().includes(query));
+  }, [analysisEntries, analysisSearch]);
+
+  const filteredPredictionEntries = useMemo(() => {
+    const query = predictionSearch.trim().toLowerCase();
+    if (!query) return predictionEntries;
+    return predictionEntries.filter(
+      (entry) => entry.sampleName.toLowerCase().includes(query) || entry.smiles.toLowerCase().includes(query),
+    );
+  }, [predictionEntries, predictionSearch]);
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6">
@@ -64,20 +81,25 @@ const HistoryPage = () => {
                 </Button>
               )}
             </div>
+            <Input
+              value={analysisSearch}
+              onChange={(event) => setAnalysisSearch(event.target.value)}
+              placeholder="Search analysis history by file name"
+            />
 
-            {analysisEntries.length === 0 ? (
+            {filteredAnalysisEntries.length === 0 ? (
               <div className="glass rounded-xl flex items-center justify-center min-h-[320px]">
                 <div className="text-center">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Database className="w-8 h-8 text-primary/40" />
                   </div>
-                  <p className="text-muted-foreground mb-2">No analysis history yet</p>
-                  <p className="text-xs text-muted-foreground/60">Run analysis from the Analyze page to build your local database history.</p>
+                  <p className="text-muted-foreground mb-2">{analysisEntries.length === 0 ? "No analysis history yet" : "No analysis records match your search"}</p>
+                  <p className="text-xs text-muted-foreground/60">{analysisEntries.length === 0 ? "Run analysis from the Analyze page to build your local database history." : "Try a different keyword."}</p>
                 </div>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {analysisEntries.map((entry) => (
+                {filteredAnalysisEntries.map((entry) => (
                   <article key={entry.id} className="glass rounded-xl p-4 space-y-3">
                     <Link to={`/history/${entry.id}`}>
                       <img src={entry.imageData} alt={entry.imageName} className="w-full h-44 rounded-lg object-cover border border-border/40 hover:border-primary/50 transition-colors" />
@@ -115,20 +137,25 @@ const HistoryPage = () => {
                 </Button>
               )}
             </div>
+            <Input
+              value={predictionSearch}
+              onChange={(event) => setPredictionSearch(event.target.value)}
+              placeholder="Search prediction history by sample or SMILES"
+            />
 
-            {predictionEntries.length === 0 ? (
+            {filteredPredictionEntries.length === 0 ? (
               <div className="glass rounded-xl flex items-center justify-center min-h-[320px]">
                 <div className="text-center">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Database className="w-8 h-8 text-primary/40" />
                   </div>
-                  <p className="text-muted-foreground mb-2">No drug prediction history yet</p>
-                  <p className="text-xs text-muted-foreground/60">Generate and save outputs from the Drug Prediction tab.</p>
+                  <p className="text-muted-foreground mb-2">{predictionEntries.length === 0 ? "No drug prediction history yet" : "No prediction records match your search"}</p>
+                  <p className="text-xs text-muted-foreground/60">{predictionEntries.length === 0 ? "Generate and save outputs from the Drug Prediction tab." : "Try a different sample name or SMILES keyword."}</p>
                 </div>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {predictionEntries.map((entry) => (
+                {filteredPredictionEntries.map((entry) => (
                   <article
                     key={entry.id}
                     className="glass rounded-xl p-4 space-y-3 text-sm cursor-pointer hover:box-glow transition-all"
@@ -175,9 +202,9 @@ const HistoryPage = () => {
             </DialogHeader>
             {activePrediction && (
               <div className="grid md:grid-cols-2 gap-3 text-sm max-h-[65vh] overflow-auto pr-1">
-                <div className="rounded-md bg-secondary/40 p-3">Sample<br /><strong>{activePrediction.sampleName}</strong></div>
-                <div className="rounded-md bg-secondary/40 p-3">Created<br /><strong>{new Date(activePrediction.createdAt).toLocaleString()}</strong></div>
-                <div className="rounded-md bg-secondary/40 p-3 md:col-span-2 break-all">SMILES<br /><strong>{activePrediction.smiles}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3 min-w-0">Sample<br /><strong className="block break-all">{activePrediction.sampleName}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3 min-w-0">Created<br /><strong className="block break-words">{new Date(activePrediction.createdAt).toLocaleString()}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3 md:col-span-2 break-all min-w-0">SMILES<br /><strong className="block break-all">{activePrediction.smiles}</strong></div>
                 <div className="rounded-md bg-secondary/40 p-3">Efficacy<br /><strong>{activePrediction.outputs.predictedEfficacy}%</strong></div>
                 <div className="rounded-md bg-secondary/40 p-3">Toxicity<br /><strong>{activePrediction.outputs.predictiveToxicity}%</strong></div>
                 <div className="rounded-md bg-secondary/40 p-3">Decision<br /><strong>{activePrediction.outputs.decision}</strong></div>

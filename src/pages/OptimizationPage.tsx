@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { WandSparkles } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const OptimizationPage = () => {
   const [entries, setEntries] = useState<AnalysisHistoryEntry[]>([]);
+  const [search, setSearch] = useState("");
 
   const refresh = () => setEntries(getHistoryEntries());
 
@@ -25,13 +27,23 @@ const OptimizationPage = () => {
     };
   }, []);
 
+  const filteredEntries = entries.filter((entry) =>
+    entry.imageName.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
   return (
     <div className="min-h-screen pt-24 pb-16 container mx-auto px-6">
       <h1 className="text-3xl font-bold mb-2">Optimization</h1>
       <p className="text-muted-foreground mb-6">Open any history sample and run optimization with process tracking, editable save name, and image download.</p>
+      <Input
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search optimization sample"
+        className="mb-4"
+      />
 
       <div className="grid lg:grid-cols-2 gap-4">
-        {entries.map((entry) => (
+        {filteredEntries.map((entry) => (
           <div key={entry.id} className="glass rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <span className="font-semibold truncate">{entry.imageName}</span>
@@ -47,6 +59,7 @@ const OptimizationPage = () => {
           </div>
         ))}
       </div>
+      {filteredEntries.length === 0 && <p className="text-sm text-muted-foreground mt-4">No optimization sample matches your search.</p>}
     </div>
   );
 };

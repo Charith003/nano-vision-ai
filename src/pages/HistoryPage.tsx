@@ -175,9 +175,9 @@ const HistoryPage = () => {
             </DialogHeader>
             {activePrediction && (
               <div className="grid md:grid-cols-2 gap-3 text-sm max-h-[65vh] overflow-auto pr-1">
-                <div className="rounded-md bg-secondary/40 p-3">Sample<br /><strong>{activePrediction.sampleName}</strong></div>
-                <div className="rounded-md bg-secondary/40 p-3">Created<br /><strong>{new Date(activePrediction.createdAt).toLocaleString()}</strong></div>
-                <div className="rounded-md bg-secondary/40 p-3 md:col-span-2 break-all">SMILES<br /><strong>{activePrediction.smiles}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3 min-w-0">Sample<br /><strong className="block break-all">{activePrediction.sampleName}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3 min-w-0">Created<br /><strong className="block break-words">{new Date(activePrediction.createdAt).toLocaleString()}</strong></div>
+                <div className="rounded-md bg-secondary/40 p-3 md:col-span-2 break-all min-w-0">SMILES<br /><strong className="block break-all">{activePrediction.smiles}</strong></div>
                 <div className="rounded-md bg-secondary/40 p-3">Efficacy<br /><strong>{activePrediction.outputs.predictedEfficacy}%</strong></div>
                 <div className="rounded-md bg-secondary/40 p-3">Toxicity<br /><strong>{activePrediction.outputs.predictiveToxicity}%</strong></div>
                 <div className="rounded-md bg-secondary/40 p-3">Decision<br /><strong>{activePrediction.outputs.decision}</strong></div>

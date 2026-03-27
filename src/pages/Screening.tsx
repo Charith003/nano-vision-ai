@@ -163,7 +163,12 @@ const Screening = () => {
         <Dialog open={Boolean(openSection)} onOpenChange={(open) => !open && setOpenSection(null)}>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle>{sections.find((section) => section.key === openSection)?.title}</DialogTitle>
+              <DialogTitle className="text-xl leading-snug break-words">
+                {sections.find((section) => section.key === openSection)?.title ?? "Screening Details"}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Showing {selectedSamples.length} selected sample{selectedSamples.length === 1 ? "" : "s"}.
+              </p>
             </DialogHeader>
             <div className="grid md:grid-cols-2 gap-3 max-h-[65vh] overflow-auto pr-1">
               {selectedSamples.map((sample) => (

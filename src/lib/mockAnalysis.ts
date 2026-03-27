@@ -65,6 +65,14 @@ export interface AnalysisResult {
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 
+const mockCompounds = [
+  { smiles: "CC(=O)OC1=CC=CC=C1C(=O)O", molecularWeight: 180.16, solubility: 3.2 }, // Aspirin
+  { smiles: "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O", molecularWeight: 206.28, solubility: 0.08 }, // Ibuprofen
+  { smiles: "CC(=O)NC1=CC=C(O)C=C1", molecularWeight: 151.16, solubility: 14.0 }, // Paracetamol
+  { smiles: "CN1CCC[C@H]1C2=CN=CC=C2", molecularWeight: 162.23, solubility: 10.5 }, // Nicotine
+  { smiles: "C1=CC=C(C=C1)C=O", molecularWeight: 106.12, solubility: 6.7 }, // Benzaldehyde
+] as const;
+
 export function runMockAnalysis(): AnalysisResult {
   const nucleiCount = Math.floor(Math.random() * 120) + 30;
   const meanArea = parseFloat((Math.random() * 500 + 200).toFixed(1));
@@ -139,10 +147,11 @@ export function runMockAnalysis(): AnalysisResult {
   const thresholdGap = parseFloat((weightedScore - 62).toFixed(2));
   const finalScreeningScore = clamp(weightedScore - riskScore * 0.2);
   const modelHeadRisk = clamp(100 / (1 + Math.exp(-(riskScore - 45) / 8)));
-  const smiles = "CC(=O)OC1=CC=CC=C1C(=O)O";
-  const molecularWeight = parseFloat((180 + Math.random() * 620).toFixed(2));
+  const selectedCompound = mockCompounds[Math.floor(Math.random() * mockCompounds.length)];
+  const smiles = selectedCompound.smiles;
+  const molecularWeight = parseFloat((selectedCompound.molecularWeight + (Math.random() * 6 - 3)).toFixed(2));
   const bindingAffinity = parseFloat((-5.2 - Math.random() * 6.4).toFixed(2));
-  const solubility = parseFloat((0.2 + Math.random() * 16).toFixed(2));
+  const solubility = parseFloat(clamp(selectedCompound.solubility + (Math.random() * 2.4 - 1.2), 0.02, 20).toFixed(2));
   const cellUptakeRate = parseFloat(clamp(45 + Math.random() * 45).toFixed(1));
   const toxicityLabel: AnalysisResult["screeningMetrics"]["toxicityLabel"] =
     cytotoxicityRisk < 35 ? "Low" : cytotoxicityRisk < 62 ? "Moderate" : "High";

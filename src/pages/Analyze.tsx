@@ -210,6 +210,17 @@ const Analyze = () => {
                       <div className="rounded-lg bg-secondary/40 p-3">Target receptor binding<br /><strong className="text-3xl">{result.screeningMetrics.targetReceptorBinding.toFixed(1)}%</strong></div>
                       <div className="rounded-lg bg-secondary/40 p-3">Toxicity label<br /><strong className="text-3xl">{result.screeningMetrics.toxicityLabel}</strong></div>
                     </div>
+                    <div className="rounded-lg border border-border/40 p-4 bg-white">
+                      <p className="font-semibold mb-3 text-foreground">2D Chemical Diagram</p>
+                      <img
+                        src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(result.screeningMetrics.smiles)}/image?format=png`}
+                        alt={`2D chemical structure for ${result.screeningMetrics.smiles}`}
+                        className="h-44 object-contain mx-auto"
+                        onError={(event) => {
+                          event.currentTarget.src = "https://placehold.co/520x220?text=SMILES+diagram+unavailable";
+                        }}
+                      />
+                    </div>
                     <div className="rounded-lg border border-border/40 p-4">
                       <p className="font-semibold mb-3">Time-Series Dynamics (Diffusion / Movement / Cell Response)</p>
                       <ResponsiveContainer width="100%" height={260}>

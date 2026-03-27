@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Atom, Target, Ruler, CircleDot, Layers, BrainCircuit } from "lucide-react";
+import { Play, Atom, Target, Ruler, CircleDot, Layers, BrainCircuit, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid } from "recharts";
 import ImageUploader from "@/components/ImageUploader";
 import StatCard from "@/components/StatCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { runMockAnalysis, type AnalysisResult } from "@/lib/mockAnalysis";
-import { addHistoryEntry } from "@/lib/historyDb";
+import { addHistoryEntry, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const toBase64 = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -17,11 +17,53 @@ const toBase64 = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+const compressImageForStorage = (file: File, maxSide = 1400, quality = 0.72) =>
+  new Promise<string>((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      const longestSide = Math.max(image.width, image.height) || 1;
+      const scale = Math.min(1, maxSide / longestSide);
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+      if (!context) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Unable to initialize canvas context for image compression."));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+      const compressedData = canvas.toDataURL("image/jpeg", quality);
+      URL.revokeObjectURL(objectUrl);
+      resolve(compressedData);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Unable to compress selected image."));
+    };
+
+    image.src = objectUrl;
+  });
+
+const isStorageQuotaError = (error: unknown) =>
+  error instanceof DOMException && (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED");
+
 const Analyze = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const modelConfidence = useMemo(() => {
     if (!result) return null;
@@ -46,24 +88,49 @@ const Analyze = () => {
   const handleAnalyze = () => {
     if (!imageFile) return;
     setAnalyzing(true);
+    setSaveMessage(null);
+    setSavedEntryId(null);
 
-    setTimeout(async () => {
+    setTimeout(() => {
+      const nextResult = runMockAnalysis();
+      setResult(nextResult);
+      setAnalyzing(false);
+    }, 1200);
+  };
+
+  const handleSaveAnalysis = async () => {
+    if (!imageFile || !result || saving) return;
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      let imageData = await toBase64(imageFile);
+      let saved: AnalysisHistoryEntry;
+
       try {
-        const nextResult = runMockAnalysis();
-        setResult(nextResult);
-        setAnalyzing(false);
-
-        const imageData = await toBase64(imageFile);
-        addHistoryEntry({
+        saved = addHistoryEntry({
           imageName: imageFile.name,
           imageData,
-          result: nextResult,
+          result,
         });
       } catch (error) {
-        console.error("Failed to save analysis history", error);
-        setAnalyzing(false);
+        if (!isStorageQuotaError(error)) throw error;
+        imageData = await compressImageForStorage(imageFile);
+        saved = addHistoryEntry({
+          imageName: imageFile.name,
+          imageData,
+          result,
+        });
       }
-    }, 1200);
+
+      setSavedEntryId(saved.id);
+      setSaveMessage(`Saved successfully. Record ID: ${saved.id}`);
+    } catch (error) {
+      console.error("Failed to save analysis history", error);
+      setSaveMessage("Failed to save analysis. Storage may be full or blocked in this browser.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -81,6 +148,8 @@ const Analyze = () => {
                 setImagePreview(url);
                 setImageFile(file);
                 setResult(null);
+                setSavedEntryId(null);
+                setSaveMessage(null);
               }}
             />
 
@@ -106,6 +175,16 @@ const Analyze = () => {
 
             {result && (
               <div className="glass rounded-xl p-4 space-y-3">
+                <Button
+                  onClick={handleSaveAnalysis}
+                  disabled={saving || Boolean(savedEntryId)}
+                  variant={savedEntryId ? "outline" : "default"}
+                  className="w-full gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? "Saving..." : savedEntryId ? "Saved to History" : "Save Analysis"}
+                </Button>
+                {saveMessage && <p className="text-xs text-muted-foreground break-all">{saveMessage}</p>}
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">ML Model</h3>
                 <p className="text-primary font-semibold">NanoVisionNet-X (Autoencoder + Morphology + Multimodal Heads)</p>
                 <p className="text-sm text-muted-foreground">Confidence: {modelConfidence}% (calibrated)</p>

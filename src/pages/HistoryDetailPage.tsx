@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Download, LoaderCircle, Save, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getHistoryEntries, getHistoryEntryById, updateHistoryEntry } from "@/lib/historyDb";
+import { addHistoryEntry, getHistoryEntryById, updateHistoryEntry } from "@/lib/historyDb";
 import { createOptimizedImageData, downloadOptimizedImage, optimizeForLowerRisk } from "@/lib/optimizer";
 import type { AnalysisResult } from "@/lib/mockAnalysis";
 
@@ -61,6 +61,7 @@ const HistoryDetailPage = () => {
     const resultToSave = draftResult ?? entry.optimizedResult;
     const imageToSave = draftImage ?? entry.optimizedImageData ?? entry.imageData;
     const nameToSave = draftName || entry.optimizedName || `${entry.imageName.replace(/\.[^/.]+$/, "")}-optimized`;
+    const snapshotImageName = nameToSave.includes(".") ? nameToSave : `${nameToSave}.png`;
 
     if (!resultToSave) {
       setSaveMessage("Run optimization first before saving.");
@@ -79,14 +80,13 @@ const HistoryDetailPage = () => {
       return;
     }
 
-    const relatedEntries = getHistoryEntries().filter((item) => item.id !== entry.id && item.imageName === entry.imageName);
-    relatedEntries.forEach((related) => {
-      updateHistoryEntry(related.id, (current) => ({
-        ...current,
-        optimizedResult: resultToSave,
-        optimizedImageData: imageToSave,
-        optimizedName: current.optimizedName || nameToSave,
-      }));
+    const snapshot = addHistoryEntry({
+      imageName: snapshotImageName,
+      imageData: imageToSave,
+      result: resultToSave,
+      optimizedResult: resultToSave,
+      optimizedImageData: imageToSave,
+      optimizedName: nameToSave,
     });
 
     const verified = getHistoryEntryById(entry.id);
@@ -95,7 +95,7 @@ const HistoryDetailPage = () => {
       return;
     }
 
-    setSaveMessage("Optimized data saved successfully.");
+    setSaveMessage(`Optimized data saved successfully. Snapshot ID: ${snapshot.id}`);
     setDraftResult(resultToSave);
     setDraftImage(imageToSave);
     setDraftName(nameToSave);

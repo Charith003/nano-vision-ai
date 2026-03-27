@@ -7,7 +7,7 @@ import ImageUploader from "@/components/ImageUploader";
 import StatCard from "@/components/StatCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { runMockAnalysis, type AnalysisResult } from "@/lib/mockAnalysis";
-import { addHistoryEntry } from "@/lib/historyDb";
+import { addHistoryEntry, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const toBase64 = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -16,6 +16,45 @@ const toBase64 = (file: File) =>
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+const compressImageForStorage = (file: File, maxSide = 1400, quality = 0.72) =>
+  new Promise<string>((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      const longestSide = Math.max(image.width, image.height) || 1;
+      const scale = Math.min(1, maxSide / longestSide);
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+      if (!context) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Unable to initialize canvas context for image compression."));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+      const compressedData = canvas.toDataURL("image/jpeg", quality);
+      URL.revokeObjectURL(objectUrl);
+      resolve(compressedData);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Unable to compress selected image."));
+    };
+
+    image.src = objectUrl;
+  });
+
+const isStorageQuotaError = (error: unknown) =>
+  error instanceof DOMException && (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED");
 
 const Analyze = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -57,6 +96,41 @@ const Analyze = () => {
       setResult(nextResult);
       setAnalyzing(false);
     }, 1200);
+  };
+
+  const handleSaveAnalysis = async () => {
+    if (!imageFile || !result || saving) return;
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      let imageData = await toBase64(imageFile);
+      let saved: AnalysisHistoryEntry;
+
+      try {
+        saved = addHistoryEntry({
+          imageName: imageFile.name,
+          imageData,
+          result,
+        });
+      } catch (error) {
+        if (!isStorageQuotaError(error)) throw error;
+        imageData = await compressImageForStorage(imageFile);
+        saved = addHistoryEntry({
+          imageName: imageFile.name,
+          imageData,
+          result,
+        });
+      }
+
+      setSavedEntryId(saved.id);
+      setSaveMessage(`Saved successfully. Record ID: ${saved.id}`);
+    } catch (error) {
+      console.error("Failed to save analysis history", error);
+      setSaveMessage("Failed to save analysis. Storage may be full or blocked in this browser.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveAnalysis = async () => {

@@ -137,6 +137,29 @@ const Analyze = () => {
     }
   };
 
+  const handleSaveAnalysis = async () => {
+    if (!imageFile || !result || saving) return;
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const imageData = await toBase64(imageFile);
+      const saved = addHistoryEntry({
+        imageName: imageFile.name,
+        imageData,
+        result,
+      });
+
+      setSavedEntryId(saved.id);
+      setSaveMessage(`Saved successfully. Record ID: ${saved.id}`);
+    } catch (error) {
+      console.error("Failed to save analysis history", error);
+      setSaveMessage("Failed to save analysis. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6">

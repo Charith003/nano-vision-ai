@@ -77,3 +77,11 @@ export function addDrugPredictionRecord(entry: Omit<DrugPredictionRecord, "id" |
 export function clearDrugPredictionHistory() {
   localStorage.removeItem(STORAGE_KEY);
 }
+
+export function deleteDrugPredictionRecord(id: string): boolean {
+  const entries = getDrugPredictionHistory();
+  const filtered = entries.filter((entry) => entry.id !== id);
+  if (filtered.length === entries.length) return false;
+  saveDrugPredictionHistory(filtered);
+  return true;
+}

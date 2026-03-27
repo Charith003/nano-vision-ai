@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Save, Sparkles, TestTubeDiagonal } from "lucide-react";
+import { Download, Save, Sparkles, TestTubeDiagonal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addDrugPredictionRecord } from "@/lib/drugPredictionDb";
-import { getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { addDrugPredictionRecord, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
+import { deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const toSafeNumber = (value: unknown, fallback: number) => {
   const n = Number(value);
@@ -18,6 +19,9 @@ const riskBand = (value: number): "LOW" | "MODERATE" | "HIGH" =>
 
 const DrugPrediction = () => {
   const [history, setHistory] = useState<AnalysisHistoryEntry[]>([]);
+  const [predictionHistory, setPredictionHistory] = useState<DrugPredictionRecord[]>([]);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>("");
+  const [selectedAnalysisMode, setSelectedAnalysisMode] = useState<"original" | "optimized">("original");
   const [sampleName, setSampleName] = useState("candidate-001");
   const [smiles, setSmiles] = useState("CC(=O)OC1=CC=CC=C1C(=O)O");
   const [molecularWeight, setMolecularWeight] = useState(320);
@@ -35,11 +39,25 @@ const DrugPrediction = () => {
   useEffect(() => {
     const entries = getHistoryEntries();
     setHistory(entries);
+    setPredictionHistory(getDrugPredictionHistory());
 
-    const latest = entries[0]?.result?.screeningMetrics;
+    const firstId = entries[0]?.id;
+    if (firstId) {
+      setSelectedAnalysisId(firstId);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAnalysisId) return;
+    const source = history.find((entry) => entry.id === selectedAnalysisId);
+    if (!source) return;
+
+    const result = selectedAnalysisMode === "optimized" && source.optimizedResult ? source.optimizedResult : source.result;
+    const latest = result?.screeningMetrics;
     if (!latest) return;
 
-    setSampleName(entries[0]?.imageName?.replace(/\.[^/.]+$/, "") || "candidate-001");
+    const suffix = selectedAnalysisMode === "optimized" ? "-optimized" : "";
+    setSampleName(`${source.imageName.replace(/\.[^/.]+$/, "")}${suffix}`);
     setSmiles(typeof latest.smiles === "string" && latest.smiles.length > 0 ? latest.smiles : "CC(=O)OC1=CC=CC=C1C(=O)O");
     setMolecularWeight(toSafeNumber(latest.molecularWeight, 320));
     setBindingAffinity(toSafeNumber(latest.bindingAffinity, -8.2));
@@ -50,7 +68,7 @@ const DrugPrediction = () => {
     setDiffusionTrend(toSafeNumber(latest.diffusionTrend, 74));
     setMovementTrend(toSafeNumber(latest.movementTrend, 71));
     setResponseTrend(toSafeNumber(latest.responseTrend, 69));
-  }, []);
+  }, [history, selectedAnalysisId, selectedAnalysisMode]);
 
   const prediction = useMemo(() => {
     const transportEfficiency = Math.max(0, Math.min(100, (diffusionTrend + movementTrend) / 2));
@@ -208,19 +226,86 @@ const DrugPrediction = () => {
     });
 
     setSaveMessage(`Saved prediction for ${sampleName || "candidate"}.`);
+    setPredictionHistory(getDrugPredictionHistory());
     setOpen(false);
+  };
+
+  const downloadPredictionTxt = () => {
+    const lines = [
+      `Sample: ${sampleName}`,
+      `SMILES: ${smiles}`,
+      `Predicted efficacy: ${prediction.efficacy}%`,
+      `Predictive toxicity: ${prediction.toxicity}%`,
+      `Decision: ${prediction.decision}`,
+      `Lipinski: ${prediction.lipinskiCompliance}`,
+      `CYP3A4 inhibition: ${prediction.cyp3a4InhibitionRisk}`,
+      `Drug-likeness: ${prediction.drugLikenessScore}/1`,
+      `Confidence: ${prediction.predictionConfidence}%`,
+      `Reference docking: ${prediction.referenceDockingScore} kcal/mol`,
+      `Compound docking: ${prediction.compoundDockingScore} kcal/mol`,
+      `Improvement: ${prediction.dockingImprovementPercent}%`,
+    ].join("\n");
+
+    const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${sampleName || "drug-prediction"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const removePrediction = (id: string) => {
+    deleteDrugPredictionRecord(id);
+    setPredictionHistory(getDrugPredictionHistory());
+  };
+
+  const removeAnalysis = (id: string) => {
+    deleteHistoryEntry(id);
+    const updated = getHistoryEntries();
+    setHistory(updated);
+    if (selectedAnalysisId === id) {
+      setSelectedAnalysisId(updated[0]?.id ?? "");
+    }
   };
 
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6 space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold mb-2">Complete Computational Drug Discovery</h1>
+          <h1 className="text-3xl font-bold mb-2">Drug Discovery analysis</h1>
           <p className="text-muted-foreground">Multimodal workspace combining image-derived morphology, molecular descriptors, nano-bio interactions, and temporal dynamics for publication-ready screening outputs.</p>
         </motion.div>
 
         <div className="glass rounded-xl p-5 space-y-5">
           <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Load Analysis from History</Label>
+              <Select value={selectedAnalysisId || undefined} onValueChange={setSelectedAnalysisId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select history record" />
+                </SelectTrigger>
+                <SelectContent>
+                  {history.map((entry) => (
+                    <SelectItem key={entry.id} value={entry.id}>
+                      {entry.imageName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>History Source</Label>
+              <Select value={selectedAnalysisMode} onValueChange={(value: "original" | "optimized") => setSelectedAnalysisMode(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="original">Original Analysis</SelectItem>
+                  <SelectItem value="optimized">Optimized Analysis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label>Sample Name</Label>
               <Input value={sampleName} onChange={(event) => setSampleName(event.target.value)} placeholder="sample identifier" />
@@ -362,10 +447,47 @@ const DrugPrediction = () => {
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={savePrediction} className="gap-2"><Save className="w-4 h-4" /> Save Drug Prediction</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={downloadPredictionTxt} className="gap-2"><Download className="w-4 h-4" /> Save as Text</Button>
+                <Button onClick={savePrediction} className="gap-2"><Save className="w-4 h-4" /> Save Drug Prediction</Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
+
+        <div className="glass rounded-xl p-4">
+          <h3 className="font-semibold mb-3">Quick Management</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium mb-2">Delete individual analysis history item</p>
+              <div className="space-y-2 max-h-44 overflow-auto pr-1">
+                {history.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between rounded-md border border-border/40 p-2 text-xs">
+                    <span className="truncate pr-3">{entry.imageName}</span>
+                    <Button size="sm" variant="outline" className="h-7 px-2 gap-1" onClick={() => removeAnalysis(entry.id)}>
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </Button>
+                  </div>
+                ))}
+                {history.length === 0 && <p className="text-xs text-muted-foreground">No analysis history available.</p>}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-2">Delete individual prediction history item</p>
+              <div className="space-y-2 max-h-44 overflow-auto pr-1">
+                {predictionHistory.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between rounded-md border border-border/40 p-2 text-xs">
+                    <span className="truncate pr-3">{entry.sampleName}</span>
+                    <Button size="sm" variant="outline" className="h-7 px-2 gap-1" onClick={() => removePrediction(entry.id)}>
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </Button>
+                  </div>
+                ))}
+                {predictionHistory.length === 0 && <p className="text-xs text-muted-foreground">No prediction history available.</p>}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

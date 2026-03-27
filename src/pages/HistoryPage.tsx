@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import { Database, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { clearDrugPredictionHistory, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
-import { clearHistoryEntries, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
+import { clearDrugPredictionHistory, deleteDrugPredictionRecord, getDrugPredictionHistory, type DrugPredictionRecord } from "@/lib/drugPredictionDb";
+import { clearHistoryEntries, deleteHistoryEntry, getHistoryEntries, type AnalysisHistoryEntry } from "@/lib/historyDb";
 
 const HistoryPage = () => {
   const [analysisEntries, setAnalysisEntries] = useState<AnalysisHistoryEntry[]>([]);
@@ -28,6 +28,16 @@ const HistoryPage = () => {
   const clearPrediction = () => {
     clearDrugPredictionHistory();
     setPredictionEntries([]);
+  };
+
+  const removeAnalysisItem = (id: string) => {
+    deleteHistoryEntry(id);
+    setAnalysisEntries(getHistoryEntries());
+  };
+
+  const removePredictionItem = (id: string) => {
+    deleteDrugPredictionRecord(id);
+    setPredictionEntries(getDrugPredictionHistory());
   };
 
   return (
@@ -84,6 +94,11 @@ const HistoryPage = () => {
                         <span className="font-semibold">{entry.result.screeningMetrics.riskScore.toFixed(1)}</span>
                       </div>
                     </div>
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="outline" className="gap-1 h-7 px-2" onClick={() => removeAnalysisItem(entry.id)}>
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </Button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -126,6 +141,11 @@ const HistoryPage = () => {
                     </div>
                     <div className="rounded-md bg-primary/10 border border-primary/30 p-2 text-xs">
                       Decision: <strong>{entry.outputs.decision}</strong> · Multi-factor: <strong>{entry.outputs.multiFactorScore}</strong>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="outline" className="gap-1 h-7 px-2" onClick={() => removePredictionItem(entry.id)}>
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </Button>
                     </div>
                   </article>
                 ))}

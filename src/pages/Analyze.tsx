@@ -37,22 +37,32 @@ const Analyze = () => {
     }));
   }, [result]);
 
+  const analysisSmilesDiagramUrl = useMemo(() => {
+    if (!result) return "";
+    const encodedSmiles = encodeURIComponent(result.screeningMetrics.smiles);
+    return `https://cactus.nci.nih.gov/chemical/structure/${encodedSmiles}/image?format=png&resolver=smiles`;
+  }, [result]);
+
   const handleAnalyze = () => {
     if (!imageFile) return;
     setAnalyzing(true);
 
     setTimeout(async () => {
-      const nextResult = runMockAnalysis();
-      setResult(nextResult);
+      try {
+        const nextResult = runMockAnalysis();
+        setResult(nextResult);
+        setAnalyzing(false);
 
-      const imageData = await toBase64(imageFile);
-      addHistoryEntry({
-        imageName: imageFile.name,
-        imageData,
-        result: nextResult,
-      });
-
-      setAnalyzing(false);
+        const imageData = await toBase64(imageFile);
+        addHistoryEntry({
+          imageName: imageFile.name,
+          imageData,
+          result: nextResult,
+        });
+      } catch (error) {
+        console.error("Failed to save analysis history", error);
+        setAnalyzing(false);
+      }
     }, 1200);
   };
 
@@ -127,11 +137,11 @@ const Analyze = () => {
             )}
 
             {analyzing && (
-              <div className="glass rounded-xl h-full flex items-center justify-center min-h-[400px]">
-                <div className="text-center">
+              <div className="glass rounded-xl flex items-start justify-center min-h-[180px] py-8">
+                <div className="text-center space-y-1">
                   <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
                   <p className="text-sm text-muted-foreground">Running reconstruction & segmentation pipeline...</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1 font-mono">Autoencoder → U-Net → Nanoparticle Analysis</p>
+                  <p className="text-xs text-muted-foreground/60 font-mono">Autoencoder → U-Net → Nanoparticle Analysis</p>
                 </div>
               </div>
             )}
@@ -153,7 +163,7 @@ const Analyze = () => {
                 </div>
 
                 <Tabs defaultValue="characterization" className="glass rounded-xl p-4">
-                  <TabsList className="w-full grid grid-cols-6 bg-secondary/40 h-auto">
+                  <TabsList className="w-full grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 bg-secondary/40 h-auto gap-1">
                     <TabsTrigger value="characterization">Characterization</TabsTrigger>
                     <TabsTrigger value="formulation">Formulation</TabsTrigger>
                     <TabsTrigger value="nanobio">Nano-Bio</TabsTrigger>
@@ -213,7 +223,8 @@ const Analyze = () => {
                     <div className="rounded-lg border border-border/40 p-4 bg-white">
                       <p className="font-semibold mb-3 text-foreground">2D Chemical Diagram</p>
                       <img
-                        src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(result.screeningMetrics.smiles)}/image?format=png`}
+                        key={result.screeningMetrics.smiles}
+                        src={analysisSmilesDiagramUrl}
                         alt={`2D chemical structure for ${result.screeningMetrics.smiles}`}
                         className="h-44 object-contain mx-auto"
                         onError={(event) => {

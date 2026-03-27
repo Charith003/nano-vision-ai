@@ -12,6 +12,13 @@ export interface AnalysisHistoryEntry {
 }
 
 const STORAGE_KEY = "nano-vision-history-v1";
+const HISTORY_UPDATED_EVENT = "nano-history-updated";
+
+function notifyHistoryUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(HISTORY_UPDATED_EVENT));
+  }
+}
 
 export function getHistoryEntries(): AnalysisHistoryEntry[] {
   try {
@@ -38,6 +45,7 @@ export function addHistoryEntry(entry: Omit<AnalysisHistoryEntry, "id" | "create
   const existing = getHistoryEntries();
   const updated = [next, ...existing].slice(0, 100);
   saveEntries(updated);
+  notifyHistoryUpdated();
   return next;
 }
 
@@ -47,6 +55,7 @@ export function updateHistoryEntry(id: string, updater: (entry: AnalysisHistoryE
   if (idx === -1) return null;
   entries[idx] = updater(entries[idx]);
   saveEntries(entries);
+  notifyHistoryUpdated();
   return entries[idx];
 }
 
@@ -59,9 +68,13 @@ export function deleteHistoryEntry(id: string): boolean {
   const filtered = entries.filter((entry) => entry.id !== id);
   if (filtered.length === entries.length) return false;
   saveEntries(filtered);
+  notifyHistoryUpdated();
   return true;
 }
 
 export function clearHistoryEntries() {
   localStorage.removeItem(STORAGE_KEY);
+  notifyHistoryUpdated();
 }
+
+export { HISTORY_UPDATED_EVENT };

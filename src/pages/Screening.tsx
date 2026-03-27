@@ -104,14 +104,14 @@ const Screening = () => {
               <h3 className="font-semibold mb-4">Select samples from history</h3>
               <div className="grid md:grid-cols-3 gap-3">
                 {history.map((entry) => (
-                  <div key={entry.id} className="rounded-lg border border-border/40 p-3 bg-secondary/20 space-y-2">
-                    <label className="flex items-start gap-2 cursor-pointer">
+                  <div key={entry.id} className="rounded-lg border border-border/40 p-3 bg-secondary/20 space-y-2 min-w-0">
+                    <label className="flex items-start gap-2 cursor-pointer min-w-0">
                       <Checkbox
                         checked={selectedIds.includes(entry.id)}
                         onCheckedChange={(checked) => toggleSelection(entry.id, Boolean(checked))}
                       />
-                      <span className="text-sm">
-                        <span className="font-medium block truncate">{entry.imageName}</span>
+                      <span className="text-sm min-w-0 flex-1">
+                        <span className="font-medium block break-all leading-snug">{entry.imageName}</span>
                         <span className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleDateString()}</span>
                       </span>
                     </label>
@@ -172,8 +172,8 @@ const Screening = () => {
             </DialogHeader>
             <div className="grid md:grid-cols-2 gap-3 max-h-[65vh] overflow-auto pr-1">
               {selectedSamples.map((sample) => (
-                <div key={`${sample.id}-${openSection}`} className="rounded-lg border border-border/40 p-3 bg-secondary/20">
-                  <p className="text-sm font-semibold truncate mb-1">{sample.imageName}</p>
+                <div key={`${sample.id}-${openSection}`} className="rounded-lg border border-border/40 p-3 bg-secondary/20 min-w-0">
+                  <p className="text-sm font-semibold break-all mb-1">{sample.imageName}</p>
                   <p className="text-sm text-muted-foreground">{sectionRows(openSection ?? "overview", sample)}</p>
                 </div>
               ))}

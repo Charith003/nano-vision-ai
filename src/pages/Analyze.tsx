@@ -133,7 +133,7 @@ const Analyze = () => {
             )}
 
             {analyzing && (
-              <div className="glass rounded-xl h-full flex items-center justify-center min-h-[280px]">
+              <div className="glass rounded-xl flex items-start justify-center min-h-[180px] py-8">
                 <div className="text-center space-y-1">
                   <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
                   <p className="text-sm text-muted-foreground">Running reconstruction & segmentation pipeline...</p>

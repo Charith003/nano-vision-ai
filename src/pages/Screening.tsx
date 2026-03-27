@@ -12,6 +12,7 @@ const sections = [
   { key: "reconstruction", title: "Reconstruction Quality Assessment" },
   { key: "interaction", title: "Nano–Bio Interaction Indicators" },
   { key: "formulation", title: "Formulation Stability Evaluation" },
+  { key: "drug", title: "Drug Prediction (Multimodal)" },
   { key: "aggregation", title: "Aggregation Behavior Analysis" },
   { key: "risk", title: "Multi-Factor Risk Score Calculation" },
   { key: "classification", title: "Screening Decision Classification" },
@@ -59,6 +60,8 @@ const Screening = () => {
         return `Mem ${s.screeningMetrics.membraneInteractionScore.toFixed(1)} · Cyto ${s.screeningMetrics.cytotoxicityRisk.toFixed(1)} · Zeta ${s.screeningMetrics.zetaPotentialProxy.toFixed(1)}`;
       case "formulation":
         return `Diff ${s.screeningMetrics.diffusionCoefficient.toFixed(3)} · Transport ${s.screeningMetrics.transportEfficiency.toFixed(1)} · Bio ${s.screeningMetrics.bioavailabilityPrediction.toFixed(1)}`;
+      case "drug":
+        return `Efficacy ${s.screeningMetrics.predictedDrugEfficacy.toFixed(1)} · Toxicity ${s.screeningMetrics.predictiveToxicityScore.toFixed(1)} · ${s.screeningMetrics.automatedDecision}`;
       case "aggregation":
         return `Cluster ${s.screeningMetrics.clusterFormation.toFixed(1)} · Density Δ ${s.screeningMetrics.densityVariation.toFixed(1)} · Overlap ${s.screeningMetrics.particleOverlap.toFixed(1)}`;
       case "risk":

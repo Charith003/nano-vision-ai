@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { Microscope, Upload, FlaskConical, History, WandSparkles } from "lucide-react";
+import { Microscope, Upload, FlaskConical, History, WandSparkles, TestTubeDiagonal } from "lucide-react";
 
 const navItems = [
   { path: "/", label: "Home", icon: Microscope },
   { path: "/analyze", label: "Analyze", icon: Upload },
   { path: "/screening", label: "Screening", icon: FlaskConical },
   { path: "/optimization", label: "Optimization", icon: WandSparkles },
+  { path: "/drug-prediction", label: "Drug Prediction", icon: TestTubeDiagonal },
   { path: "/history", label: "History", icon: History },
 ];
 

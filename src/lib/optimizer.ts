@@ -25,6 +25,19 @@ export function optimizeForLowerRisk(result: AnalysisResult): AnalysisResult {
   m.finalScreeningScore = parseFloat(clamp(result.screeningMetrics.finalScreeningScore + 11).toFixed(1));
   m.thresholdGap = parseFloat((m.weightedScore - 62).toFixed(2));
   m.modelHeadRisk = parseFloat(clamp(result.screeningMetrics.modelHeadRisk * 0.76).toFixed(1));
+  m.cellUptakeRate = parseFloat(clamp(result.screeningMetrics.cellUptakeRate + 5).toFixed(1));
+  m.proteinInteraction = parseFloat(clamp(result.screeningMetrics.proteinInteraction + 4).toFixed(1));
+  m.targetReceptorBinding = parseFloat(clamp(result.screeningMetrics.targetReceptorBinding + 5).toFixed(1));
+  m.formulationTransportScore = parseFloat(clamp(result.screeningMetrics.formulationTransportScore + 6).toFixed(1));
+  m.predictedDrugEfficacy = parseFloat(clamp(result.screeningMetrics.predictedDrugEfficacy + 8).toFixed(1));
+  m.predictiveToxicityScore = parseFloat(clamp(result.screeningMetrics.predictiveToxicityScore * 0.8).toFixed(1));
+  m.multiCriteriaScreeningScore = parseFloat(clamp(result.screeningMetrics.multiCriteriaScreeningScore + 8).toFixed(1));
+  m.synthesisYield = parseFloat(clamp(result.screeningMetrics.synthesisYield + 6).toFixed(1));
+  m.pharmacodynamicsIndex = parseFloat(clamp(result.screeningMetrics.pharmacodynamicsIndex + 5).toFixed(1));
+  m.automatedDecision =
+    m.multiCriteriaScreeningScore >= 72 ? "Promising Candidate" : m.multiCriteriaScreeningScore >= 52 ? "Needs Optimization" : "Reject";
+  m.toxicityLabel =
+    m.predictiveToxicityScore < 35 ? "Low" : m.predictiveToxicityScore < 62 ? "Moderate" : "High";
 
   optimized.screeningDecision =
     m.finalScreeningScore >= 80 ? "Promising Candidate" : m.finalScreeningScore >= 62 ? "Needs Optimization" : "Low Performance";

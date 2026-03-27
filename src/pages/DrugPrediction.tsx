@@ -279,7 +279,7 @@ const DrugPrediction = () => {
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-6 space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold mb-2">Drug Discovery analysis</h1>
+          <h1 className="text-3xl font-bold mb-2">Drug Discovery Analysis</h1>
           <p className="text-muted-foreground">Multimodal workspace combining image-derived morphology, molecular descriptors, nano-bio interactions, and temporal dynamics for publication-ready screening outputs.</p>
         </motion.div>
 
@@ -386,7 +386,9 @@ const DrugPrediction = () => {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-5xl max-h-[82vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><TestTubeDiagonal className="w-5 h-5 text-primary" /> Drug Prediction Result</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 break-words">
+                <TestTubeDiagonal className="w-5 h-5 text-primary" /> Drug Prediction Result — {sampleName || "Candidate"}
+              </DialogTitle>
             </DialogHeader>
 
             <div className="grid md:grid-cols-3 gap-3 text-sm">
